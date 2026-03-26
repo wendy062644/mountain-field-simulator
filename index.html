@@ -159,7 +159,7 @@
       game.blocks = [];
       game.weeds = [];
       game.stackZone = { x: 47 * TILE, y: 19 * TILE, w: TILE * 3, h: TILE * 2 };
-      game.houseDoorZone = { x: 8.15 * TILE, y: 16.7 * TILE, w: 1.55 * TILE, h: 2.2 * TILE };
+      game.houseDoorZone = { x: 8.15 * TILE, y: 16 * TILE, w: 1.55 * TILE, h: 2.9 * TILE };
       game.houseExitZone = { x: 14.2 * TILE, y: 14.3 * TILE, w: 1.6 * TILE, h: 1.2 * TILE };
       game.interiorGuide = { x: 20.5 * TILE, y: 8.5 * TILE, w: 20, h: 26 };
       game.blessingDone = false;
@@ -295,7 +295,7 @@
       const door = g.door;
 
       // 把可通行門洞往下壓
-      const doorOpeningTop = door.y + 26;
+      const doorOpeningTop = door.y + 70;
 
       return [
         // 門上方整片牆（往下延長到 doorOpeningTop）
