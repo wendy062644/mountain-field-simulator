@@ -111,6 +111,18 @@
       keys[k] = true;
       if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault();
       if (k === 'r') init();
+
+      if (!game.started) {
+        if (k === 'a' || k === 'ArrowLeft') game.selectedGender = 'male';
+        if (k === 'd' || k === 'ArrowRight') game.selectedGender = 'female';
+        if (k === 'Enter') {
+          const n = prompt('請輸入角色名字：', game.playerName || '拉勒姆');
+          if (n && n.trim()) game.playerName = n.trim();
+          game.started = true;
+          game.message = `歡迎，${game.playerName}。先熟悉部落，再前往山田。`;
+          updateUI();
+        }
+      }
     });
     document.addEventListener('keyup', (e) => {
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
@@ -135,6 +147,9 @@
       houseExitZone: null,
       interiorGuide: null,
       camera: { x: 0, y: 0 },
+      started: false,
+      selectedGender: 'male',
+      playerName: '拉勒姆',
       message: '使用方向鍵或 WASD 移動，靠近人物或地點後按空白鍵互動。'
     };
 
@@ -144,7 +159,7 @@
       game.blocks = [];
       game.weeds = [];
       game.stackZone = { x: 47 * TILE, y: 19 * TILE, w: TILE * 3, h: TILE * 2 };
-      game.houseDoorZone = { x: 8.25 * TILE, y: 16.9 * TILE, w: 1.55 * TILE, h: 1.55 * TILE };
+      game.houseDoorZone = { x: 9.55 * TILE, y: 17.05 * TILE, w: 1.15 * TILE, h: 1.35 * TILE };
       game.houseExitZone = { x: 14.2 * TILE, y: 14.3 * TILE, w: 1.6 * TILE, h: 1.2 * TILE };
       game.interiorGuide = { x: 20.5 * TILE, y: 8.5 * TILE, w: 20, h: 26 };
       game.blessingDone = false;
@@ -155,6 +170,7 @@
       game.burningProgress = 0;
       game.inHouse = false;
       game.camera = { x: 0, y: 0 };
+      game.started = false;
       game.message = '使用方向鍵或 WASD 移動，靠近人物或地點後按空白鍵互動。';
       buildWorld();
       updateCamera();
@@ -398,16 +414,24 @@
     }
 
     function loop() {
-      movePlayer();
-      handleInteract();
-      updateBurning();
-      updateCamera();
+      if (game.started) {
+        movePlayer();
+        handleInteract();
+        updateBurning();
+        updateCamera();
+      }
       render();
       requestAnimationFrame(loop);
     }
 
     function render() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (!game.started) {
+        drawStartScreen();
+        return;
+      }
+
       if (game.inHouse) {
         drawInteriorScene();
         drawNPC(game.interiorGuide, '#5a3420', '#d0b98c');
@@ -530,57 +554,68 @@
 
     function drawStoneHouse(b) {
       if (b.type !== 'house') return;
-      const x = b.x - 16, y = b.y - 30;
-      const w = 7 * TILE;
+      const x = b.x - 26, y = b.y - 42;
+      const w = 8.4 * TILE;
+      const h = 5.2 * TILE;
+
+      // roof
       ctx.fillStyle = '#2d2d2d';
       ctx.beginPath();
-      ctx.moveTo(x + 8, y + 40);
-      ctx.lineTo(x + 62, y + 14);
-      ctx.lineTo(x + w - 6, y + 30);
-      ctx.lineTo(x + w + 6, y + 42);
+      ctx.moveTo(x + 12, y + 54);
+      ctx.lineTo(x + 86, y + 18);
+      ctx.lineTo(x + w - 10, y + 38);
+      ctx.lineTo(x + w + 8, y + 56);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = '#5b5b5b';
-      for (let i = 0; i < 15; i++) {
-        ctx.fillRect(x + 6 + i * 15, y + 28 + (i % 2), 20, 4);
-        ctx.fillRect(x + 2 + i * 15, y + 36 + (i % 2), 20, 4);
+      ctx.fillStyle = '#5f5f5f';
+      for (let i = 0; i < 18; i++) {
+        ctx.fillRect(x + 8 + i * 16, y + 38 + (i % 2), 22, 4);
+        ctx.fillRect(x + 2 + i * 16, y + 47 + (i % 2), 22, 4);
       }
+
+      // wall
       ctx.fillStyle = '#2d3133';
-      ctx.fillRect(x + 8, y + 42, w - 10, 118);
-      ctx.fillStyle = '#64676b';
-      for (let ry = 0; ry < 10; ry++) {
-        for (let rx = 0; rx < 11; rx++) {
-          const sx = x + 12 + rx * 18 + (ry % 2 ? 5 : 0);
-          const sy = y + 48 + ry * 10;
-          ctx.fillRect(sx, sy, 16, 5);
+      ctx.fillRect(x + 12, y + 56, w - 16, h - 20);
+      ctx.fillStyle = '#676a6f';
+      for (let ry = 0; ry < 12; ry++) {
+        for (let rx = 0; rx < 13; rx++) {
+          const sx = x + 18 + rx * 19 + (ry % 2 ? 6 : 0);
+          const sy = y + 62 + ry * 10;
+          ctx.fillRect(sx, sy, 17, 5);
         }
       }
+
+      // carved lintel
       ctx.fillStyle = '#6a4327';
-      ctx.fillRect(x + 18, y + 58, w - 46, 18);
-      ctx.fillStyle = '#b98956';
-      for (let i = 0; i < 6; i++) {
+      ctx.fillRect(x + 26, y + 76, w - 58, 20);
+      ctx.fillStyle = '#bf8e58';
+      for (let i = 0; i < 7; i++) {
         ctx.beginPath();
-        ctx.arc(x + 38 + i * 28, y + 67, 7, 0, Math.PI * 2);
+        ctx.arc(x + 46 + i * 30, y + 86, 8, 0, Math.PI * 2);
         ctx.fill();
       }
+
+      // bigger door
       ctx.fillStyle = '#4e2d19';
-      ctx.fillRect(x + 68, y + 84, 44, 76);
+      ctx.fillRect(x + 92, y + 106, 52, 92);
       ctx.strokeStyle = '#8d603d';
       ctx.lineWidth = 2;
-      ctx.strokeRect(x + 72, y + 88, 36, 68);
+      ctx.strokeRect(x + 97, y + 111, 42, 82);
       ctx.beginPath();
-      ctx.arc(x + 90, y + 118, 10, 0, Math.PI * 2);
+      ctx.arc(x + 118, y + 145, 11, 0, Math.PI * 2);
       ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(x + 90, y + 128); ctx.lineTo(x + 90, y + 145);
-      ctx.moveTo(x + 90, y + 136); ctx.lineTo(x + 80, y + 144);
-      ctx.moveTo(x + 90, y + 136); ctx.lineTo(x + 100, y + 144);
+      ctx.moveTo(x + 118, y + 156); ctx.lineTo(x + 118, y + 176);
+      ctx.moveTo(x + 118, y + 164); ctx.lineTo(x + 106, y + 174);
+      ctx.moveTo(x + 118, y + 164); ctx.lineTo(x + 130, y + 174);
       ctx.stroke();
+
+      // standing slab
       ctx.fillStyle = '#434343';
       ctx.beginPath();
-      ctx.moveTo(x + w - 20, y + 158);
-      ctx.lineTo(x + w + 6, y + 92);
-      ctx.lineTo(x + w + 18, y + 156);
+      ctx.moveTo(x + w - 24, y + h);
+      ctx.lineTo(x + w + 10, y + 118);
+      ctx.lineTo(x + w + 24, y + h - 4);
       ctx.closePath();
       ctx.fill();
     }
@@ -744,80 +779,73 @@
 
     function drawPlayer() {
       const p = game.player;
+      const female = game.selectedGender === 'female';
       const x = p.x - 18;
       const y = p.y - 54;
 
-      // legs
-      ctx.fillStyle = '#141414';
-      ctx.fillRect(x + 18, y + 84, 12, 30);
-      ctx.fillRect(x + 40, y + 84, 12, 30);
-
-      // leg decorations
-      ctx.fillStyle = '#d9a241';
-      for (let i = 0; i < 4; i++) {
-        ctx.fillRect(x + 20 + i * 2, y + 84, 1, 30);
-        ctx.fillRect(x + 42 + i * 2, y + 84, 1, 30);
+      if (female) {
+        ctx.fillStyle = '#b7182b';
+        ctx.fillRect(x + 14, y + 46, 46, 50);
+        ctx.fillStyle = '#f0c45d';
+        for (let i = 0; i < 6; i++) ctx.fillRect(x + 17 + i * 7, y + 50, 3, 38);
+        ctx.fillStyle = '#1c1c1c';
+        ctx.fillRect(x + 24, y + 96, 10, 18);
+        ctx.fillRect(x + 40, y + 96, 10, 18);
+        ctx.fillStyle = '#d2a54d';
+        ctx.fillRect(x + 14, y + 92, 46, 4);
+        ctx.fillStyle = '#c9a77f';
+        ctx.fillRect(x + 24, y + 14, 24, 22);
+        ctx.fillStyle = '#2b1712';
+        ctx.fillRect(x + 20, y + 7, 32, 9);
+        ctx.fillStyle = '#cb3d27';
+        ctx.fillRect(x + 24, y + 1, 24, 7);
+        ctx.fillStyle = '#fff8ec';
+        ctx.fillRect(x + 30, y - 16, 4, 16);
+        ctx.fillStyle = '#433027';
+        ctx.fillRect(x + 39, y - 22, 4, 22);
+        ctx.fillStyle = '#efe8d4';
+        for (let i = 0; i < 6; i++) ctx.fillRect(x + 20 + i * 5, y + 38, 3, 4);
+      } else {
+        // legs
+        ctx.fillStyle = '#141414';
+        ctx.fillRect(x + 18, y + 84, 12, 30);
+        ctx.fillRect(x + 40, y + 84, 12, 30);
+        ctx.fillStyle = '#d9a241';
+        for (let i = 0; i < 4; i++) {
+          ctx.fillRect(x + 20 + i * 2, y + 84, 1, 30);
+          ctx.fillRect(x + 42 + i * 2, y + 84, 1, 30);
+        }
+        ctx.fillStyle = '#111';
+        ctx.fillRect(x + 12, y + 38, 48, 48);
+        ctx.fillStyle = '#d6362e';
+        ctx.fillRect(x + 29, y + 38, 10, 48);
+        ctx.fillStyle = '#e3ba59';
+        for (let i = 0; i < 6; i++) ctx.fillRect(x + 15 + i * 7, y + 42 + (i % 2), 3, 36);
+        ctx.fillStyle = '#f3ead5';
+        for (let i = 0; i < 7; i++) ctx.fillRect(x + 15 + i * 6, y + 33, 3, 4);
+        ctx.fillStyle = '#3a9b7d';
+        ctx.beginPath(); ctx.moveTo(x + 18, y + 40); ctx.lineTo(x + 30, y + 40); ctx.lineTo(x + 20, y + 99); ctx.lineTo(x + 8, y + 99); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#e2ad48';
+        ctx.fillRect(x + 29, y + 40, 3, 52);
+        ctx.fillStyle = '#8e6841';
+        ctx.fillRect(x + 8, y + 47, 5, 26); ctx.fillRect(x + 59, y + 47, 5, 26);
+        ctx.fillStyle = '#c9a77f';
+        ctx.fillRect(x + 23, y + 14, 24, 22);
+        ctx.fillStyle = '#1b1b1b';
+        ctx.fillRect(x + 30, y + 23, 2, 2); ctx.fillRect(x + 38, y + 23, 2, 2);
+        ctx.fillStyle = '#22120f';
+        ctx.fillRect(x + 22, y + 7, 26, 9);
+        ctx.fillStyle = '#cb3d27';
+        ctx.fillRect(x + 25, y + 2, 20, 6);
+        ctx.fillStyle = '#f0ca62';
+        ctx.fillRect(x + 31, y + 0, 8, 4);
+        ctx.fillStyle = '#fff8ec';
+        ctx.fillRect(x + 33, y - 19, 4, 18);
+        ctx.fillStyle = '#433027';
+        ctx.fillRect(x + 38, y - 24, 3, 23);
+        ctx.fillStyle = '#efe8d4';
+        for (let i = 0; i < 4; i++) ctx.fillRect(x + 20 + i * 6, y + 46 + i * 8, 5, 6);
       }
-
-      // torso cloth
-      ctx.fillStyle = '#111';
-      ctx.fillRect(x + 12, y + 38, 48, 48);
-      ctx.fillStyle = '#d6362e';
-      ctx.fillRect(x + 29, y + 38, 10, 48);
-
-      // rich pattern lines
-      ctx.fillStyle = '#e3ba59';
-      for (let i = 0; i < 6; i++) {
-        ctx.fillRect(x + 15 + i * 7, y + 42 + (i % 2), 3, 36);
-      }
-
-      // shell / bead band
-      ctx.fillStyle = '#f3ead5';
-      for (let i = 0; i < 7; i++) ctx.fillRect(x + 15 + i * 6, y + 33, 3, 4);
-
-      // green sash like reference clothing
-      ctx.fillStyle = '#3a9b7d';
-      ctx.beginPath();
-      ctx.moveTo(x + 18, y + 40);
-      ctx.lineTo(x + 30, y + 40);
-      ctx.lineTo(x + 20, y + 99);
-      ctx.lineTo(x + 8, y + 99);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = '#e2ad48';
-      ctx.fillRect(x + 29, y + 40, 3, 52);
-
-      // arms
-      ctx.fillStyle = '#8e6841';
-      ctx.fillRect(x + 8, y + 47, 5, 26);
-      ctx.fillRect(x + 59, y + 47, 5, 26);
-
-      // head
-      ctx.fillStyle = '#c9a77f';
-      ctx.fillRect(x + 23, y + 14, 24, 22);
-
-      // face detail
-      ctx.fillStyle = '#1b1b1b';
-      ctx.fillRect(x + 30, y + 23, 2, 2);
-      ctx.fillRect(x + 38, y + 23, 2, 2);
-
-      // headdress
-      ctx.fillStyle = '#22120f';
-      ctx.fillRect(x + 22, y + 7, 26, 9);
-      ctx.fillStyle = '#cb3d27';
-      ctx.fillRect(x + 25, y + 2, 20, 6);
-      ctx.fillStyle = '#f0ca62';
-      ctx.fillRect(x + 31, y + 0, 8, 4);
-
-      // feathers
-      ctx.fillStyle = '#fff8ec';
-      ctx.fillRect(x + 33, y - 19, 4, 18);
-      ctx.fillStyle = '#433027';
-      ctx.fillRect(x + 38, y - 24, 3, 23);
-
-      // diagonal shell ornaments
-      ctx.fillStyle = '#efe8d4';
-      for (let i = 0; i < 4; i++) ctx.fillRect(x + 20 + i * 6, y + 46 + i * 8, 5, 6);
 
       // direction highlight
       ctx.fillStyle = 'rgba(255,255,255,0.85)';
@@ -1023,6 +1051,62 @@
       ctx.beginPath();
       ctx.arc(x, y, r, 0, Math.PI * 2);
       ctx.fill();
+    }
+
+    function drawStartScreen() {
+      ctx.fillStyle = '#1f2b1c';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      g.addColorStop(0, '#355b2e');
+      g.addColorStop(1, '#1c2a18');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = 'rgba(35,24,12,0.82)';
+      ctx.fillRect(250, 110, 780, 520);
+      ctx.strokeStyle = '#e6c98a';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(250, 110, 780, 520);
+
+      ctx.fillStyle = '#ffd27d';
+      ctx.font = 'bold 40px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('魯凱族山田燒墾', canvas.width / 2, 180);
+
+      ctx.fillStyle = '#fff7de';
+      ctx.font = '24px sans-serif';
+      ctx.fillText('選擇角色', canvas.width / 2, 235);
+
+      const leftX = 430, rightX = 780, y = 320;
+      ctx.fillStyle = game.selectedGender === 'male' ? '#f3d28d' : '#8a7553';
+      ctx.fillRect(leftX - 90, y - 90, 180, 220);
+      ctx.fillStyle = game.selectedGender === 'female' ? '#f3d28d' : '#8a7553';
+      ctx.fillRect(rightX - 90, y - 90, 180, 220);
+      ctx.strokeStyle = '#3a2816';
+      ctx.strokeRect(leftX - 90, y - 90, 180, 220);
+      ctx.strokeRect(rightX - 90, y - 90, 180, 220);
+
+      // preview characters
+      const oldPlayer = game.player;
+      game.player = { x: leftX, y: y + 40, dir: 'down' };
+      const oldGender = game.selectedGender;
+      game.selectedGender = 'male';
+      drawPlayer();
+      game.player = { x: rightX, y: y + 40, dir: 'down' };
+      game.selectedGender = 'female';
+      drawPlayer();
+      game.player = oldPlayer;
+      game.selectedGender = oldGender;
+
+      ctx.fillStyle = '#fff7de';
+      ctx.font = '22px sans-serif';
+      ctx.fillText('男生', leftX, 470);
+      ctx.fillText('女生', rightX, 470);
+
+      ctx.font = '20px sans-serif';
+      ctx.fillText(`名字：${game.playerName}`, canvas.width / 2, 545);
+      ctx.font = '18px sans-serif';
+      ctx.fillText('左右鍵或 A / D 選擇角色，按 Enter 輸入名字並開始', canvas.width / 2, 590);
     }
 
     init();
