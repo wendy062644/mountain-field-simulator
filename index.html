@@ -159,7 +159,7 @@
       game.blocks = [];
       game.weeds = [];
       game.stackZone = { x: 47 * TILE, y: 19 * TILE, w: TILE * 3, h: TILE * 2 };
-      game.houseDoorZone = { x: 8.15 * TILE, y: 16.0 * TILE, w: 1.55 * TILE, h: 2.9 * TILE };
+      game.houseDoorZone = { x: 8.15 * TILE, y: 16.7 * TILE, w: 1.55 * TILE, h: 2.2 * TILE };
       game.houseExitZone = { x: 14.2 * TILE, y: 14.3 * TILE, w: 1.6 * TILE, h: 1.2 * TILE };
       game.interiorGuide = { x: 20.5 * TILE, y: 8.5 * TILE, w: 20, h: 26 };
       game.blessingDone = false;
@@ -190,7 +190,7 @@
       // 部落區：不使用圍牆，改用前院空地、石板地與樹木界定空間
       addBlock(6, 14, 6, 4, 'house');
       addBlock(6, 13, 6, 1, 'houseRoof');
-      addBlock(13, 14, 1, 3, 'totem');
+      addBlock(14, 14, 1, 3, 'totem');
 
       // 部落周邊以樹與石材物件構成自然邊界
       addBlock(2, 10, 1, 1, 'tree');
@@ -266,22 +266,61 @@
       return b;
     }
 
+    function getStoneHouseGeometry(b) {
+      const x = b.x - 26;
+      const y = b.y - 42;
+      const w = 8.4 * TILE;
+      const h = 5.2 * TILE;
+
+      const body = {
+        x: x + 12,
+        y: y + 56,
+        w: w - 16,
+        h: h - 20
+      };
+
+      const door = {
+        x: x + 94,
+        y: y + 106,
+        w: 50,
+        h: 92
+      };
+
+      return { x, y, w, h, body, door };
+    }
+
     function getHouseColliders(b) {
+      const g = getStoneHouseGeometry(b);
+      const body = g.body;
+      const door = g.door;
+
+      // 把可通行門洞往下壓
+      const doorOpeningTop = door.y + 26;
+
       return [
-        // 上方牆面
-        { x: b.x + 20, y: b.y + 18, w: b.w - 40, h: 42 },
+        // 門上方整片牆（往下延長到 doorOpeningTop）
+        {
+          x: body.x,
+          y: body.y,
+          w: body.w,
+          h: doorOpeningTop - body.y
+        },
 
-        // 左牆
-        { x: b.x + 10, y: b.y + 18, w: 46, h: b.h - 26 },
+        // 門左側牆
+        {
+          x: body.x,
+          y: doorOpeningTop,
+          w: door.x - body.x,
+          h: body.y + body.h - doorOpeningTop
+        },
 
-        // 右牆
-        { x: b.x + b.w - 56, y: b.y + 18, w: 46, h: b.h - 26 },
-
-        // 門左側前牆
-        { x: b.x + 56, y: b.y + 78, w: 54, h: b.h - 78 },
-
-        // 門右側前牆
-        { x: b.x + 160, y: b.y + 78, w: 22, h: b.h - 78 }
+        // 門右側牆
+        {
+          x: door.x + door.w,
+          y: doorOpeningTop,
+          w: body.x + body.w - (door.x + door.w),
+          h: body.y + body.h - doorOpeningTop
+        }
       ];
     }
 
@@ -582,9 +621,9 @@
 
     function drawStoneHouse(b) {
       if (b.type !== 'house') return;
-      const x = b.x - 26, y = b.y - 42;
-      const w = 8.4 * TILE;
-      const h = 5.2 * TILE;
+
+      const g = getStoneHouseGeometry(b);
+      const { x, y, w, h, door } = g;
 
       // roof
       ctx.fillStyle = '#2f2f2f';
@@ -606,14 +645,29 @@
       ctx.fillRect(x + 12, y + 56, w - 16, h - 20);
 
       // irregular slate stones instead of repeated emblem-like pattern
-      const rowOffsets = [0, 8, 3, 11, 5, 13, 2, 9, 4, 12, 6, 10];
-      for (let ry = 0; ry < 12; ry++) {
-        const sy = y + 62 + ry * 10;
-        const offset = rowOffsets[ry % rowOffsets.length];
-        for (let sx = x + 18 + offset; sx < x + w - 24; sx += 28) {
-          const stoneW = 18 + ((sx + sy) % 3) * 4;
-          ctx.fillStyle = ((sx / 10 + ry) % 2 === 0) ? '#6a6d72' : '#5b5f64';
-          ctx.fillRect(sx, sy, stoneW, 5);
+      const stoneRows = [
+        [26, 42, 34, 48, 30, 38],
+        [36, 30, 46, 28, 40, 32],
+        [28, 44, 34, 48, 26, 38],
+        [42, 32, 40, 30, 44, 28]
+      ];
+
+      for (let r = 0; r < 8; r++) {
+        const sy = y + 66 + r * 16;
+        let sx = x + 18 + (r % 2 ? 10 : 0);
+        const row = stoneRows[r % stoneRows.length];
+
+        for (const sw of row) {
+          if (sx + sw > x + w - 24) break;
+
+          ctx.fillStyle = ((r + sw) % 2 === 0) ? '#6a6d72' : '#5b5f64';
+          ctx.fillRect(sx, sy, sw, 10);
+
+          // 石塊下方一點陰影
+          ctx.fillStyle = 'rgba(0,0,0,0.12)';
+          ctx.fillRect(sx, sy + 8, sw, 2);
+
+          sx += sw + 6;
         }
       }
 
@@ -627,12 +681,13 @@
 
       // door
       ctx.fillStyle = '#4a2a18';
-      ctx.fillRect(x + 94, y + 106, 50, 92);
+      ctx.fillRect(door.x, door.y, door.w, door.h);
       ctx.strokeStyle = '#875a38';
       ctx.lineWidth = 2;
-      ctx.strokeRect(x + 99, y + 111, 40, 82);
+      ctx.strokeRect(door.x + 5, door.y + 5, door.w - 10, door.h - 10);
+
       ctx.beginPath();
-      ctx.arc(x + 119, y + 145, 10, 0, Math.PI * 2);
+      ctx.arc(door.x + 25, door.y + 39, 10, 0, Math.PI * 2);
       ctx.stroke();
       ctx.beginPath();
       ctx.moveTo(x + 119, y + 155);
