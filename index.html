@@ -60,22 +60,110 @@
       box-shadow: 0 8px 20px rgba(0,0,0,0.22);
     }
     #dialogue {
-      bottom: 16px;
-      background: var(--ui-bg);
+      position: absolute;
+      left: 50%;
+      bottom: 12px;
+      transform: translateX(-50%) translateY(8px);
+      width: min(96vw, 1280px);
+
+      background: rgba(35, 24, 12, 0.92);
       border: 3px solid var(--ui-border);
       border-radius: 16px;
       color: var(--ui-text);
+
       padding: 16px 18px;
       min-height: 112px;
-      box-shadow: 0 12px 28px rgba(0,0,0,0.3);
+      box-shadow: 0 12px 28px rgba(0,0,0,0.30);
+      overflow: visible;
+      pointer-events: none;
+
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.18s ease, transform 0.18s ease, min-height 0.18s ease, padding 0.18s ease;
+    }
+
+    #dialogue.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    #dialogue .dialogue-main {
       display: flex;
       flex-direction: column;
       justify-content: center;
       gap: 8px;
+      min-height: 0;
     }
-    #dialogue .title { color: #ffd27d; font-weight: 800; letter-spacing: 1px; font-size: 14px; }
-    #dialogue .text { font-size: 18px; line-height: 1.55; }
-    #dialogue .hint { font-size: 13px; opacity: 0.82; color: #ffebb9; }
+
+    #dialogue .title {
+      color: #ffd27d;
+      font-weight: 800;
+      letter-spacing: 1px;
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    #dialogue .text {
+      font-size: 18px;
+      line-height: 1.55;
+    }
+
+    #dialogue .hint {
+      font-size: 13px;
+      opacity: 0.82;
+      color: #ffebb9;
+    }
+
+    #dialoguePortrait {
+      position: absolute;
+      right: 18px;
+      top: -42px;
+      width: 180px;
+      height: 180px;
+      display: none;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      filter: drop-shadow(0 10px 18px rgba(0,0,0,0.35));
+    }
+
+    /* 正式對話時放大 */
+    #dialogue.talking {
+      background: linear-gradient(rgba(42, 28, 16, 0.96), rgba(28, 18, 10, 0.96));
+      border-width: 4px;
+      border-radius: 24px;
+      padding: 24px 220px 22px 26px;
+      min-height: 210px;
+      box-shadow: 0 18px 38px rgba(0,0,0,0.36);
+    }
+
+    #dialogue.talking .dialogue-main {
+      gap: 10px;
+      min-height: 150px;
+    }
+
+    #dialogue.talking .title {
+      font-weight: 900;
+      font-size: 22px;
+    }
+
+    #dialogue.talking .text {
+      font-size: 28px;
+      line-height: 1.65;
+      text-shadow: 0 2px 0 rgba(0,0,0,0.28);
+    }
+
+    #dialogue.talking .hint {
+      font-size: 15px;
+      opacity: 0.88;
+    }
+
+    #dialogue.talking.show-portrait #dialoguePortrait {
+      display: block;
+    }
+    #dialogue.show-portrait #dialoguePortrait {
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -88,16 +176,24 @@
     </div>
 
     <div class="panel" id="dialogue">
-      <div class="title">魯凱族山田燒墾</div>
-      <div class="text" id="dialogueText">使用方向鍵或 WASD 移動，靠近人物或地點後按空白鍵互動。</div>
-      <div class="hint">操作：移動 / 空白鍵互動 / R 重新開始</div>
+      <canvas id="dialoguePortrait" width="180" height="180"></canvas>
+
+      <div class="dialogue-main">
+        <div class="title" id="dialogueTitle">魯凱族山田燒墾</div>
+        <div class="text" id="dialogueText">使用方向鍵或 WASD 移動，靠近人物或地點後按空白鍵互動。</div>
+        <div class="hint">操作：移動 / 空白鍵互動 / R 重新開始</div>
+      </div>
     </div>
   </div>
 
   <script>
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
+    const dialogueEl = document.getElementById('dialogue');
+    const dialogueTitle = document.getElementById('dialogueTitle');
     const dialogueText = document.getElementById('dialogueText');
+    const portraitCanvas = document.getElementById('dialoguePortrait');
+    const portraitCtx = portraitCanvas.getContext('2d');
     const missionEl = document.getElementById('mission');
     const statusEl = document.getElementById('status');
 
@@ -119,7 +215,7 @@
           const n = prompt('請輸入角色名字：', game.playerName || '');
           if (n && n.trim()) game.playerName = n.trim();
           game.started = true;
-          game.message = `歡迎，${game.playerName}。先熟悉部落，再前往山田。`;
+          setMessage(`歡迎，${game.playerName}。先熟悉部落，再前往山田。`);
           updateUI();
         }
       }
@@ -150,7 +246,10 @@
       started: false,
       selectedGender: 'male',
       playerName: '',
-      message: '使用方向鍵或 WASD 移動，靠近人物或地點後按空白鍵互動。'
+      message: '使用方向鍵或 WASD 移動，靠近人物或地點後按空白鍵互動。',
+      currentSpeaker: 'system',
+      currentTitle: '魯凱族山田燒墾',
+      isTalking: false
     };
 
     function init() {
@@ -171,10 +270,14 @@
       game.inHouse = false;
       game.camera = { x: 0, y: 0 };
       game.started = false;
-      game.message = '使用方向鍵或 WASD 移動，靠近人物或地點後按空白鍵互動。';
+      game.message = '';
+      game.currentSpeaker = 'system';
+      game.currentTitle = '魯凱族山田燒墾';
+      game.isTalking = false;
       buildWorld();
       updateCamera();
       updateUI();
+      refreshDialogueUI();
     }
 
     function buildWorld() {
@@ -383,9 +486,131 @@
       return Math.hypot(ax - bx, ay - by) <= d;
     }
 
-    function setMessage(text) {
+    function setDialogue(text, speaker = 'system', title = null) {
       game.message = text;
-      dialogueText.textContent = text;
+      game.currentSpeaker = speaker;
+      game.isTalking = true;
+
+      const titleMap = {
+        system: '魯凱族山田燒墾',
+        elder: '長老',
+        interiorGuide: '屋內長者',
+        player: game.playerName || '你'
+      };
+
+      game.currentTitle = title || titleMap[speaker] || '魯凱族山田燒墾';
+      refreshDialogueUI();
+    }
+
+    function drawDialoguePortrait(speaker) {
+      portraitCtx.clearRect(0, 0, portraitCanvas.width, portraitCanvas.height);
+      if (!speaker) return;
+
+      const ctx = portraitCtx;
+      const isElder = speaker === 'elder';
+      const clothes = isElder ? '#1a1a1a' : '#5a3420';
+      const skin = '#d0b98c';
+
+      // 背景光暈
+      ctx.fillStyle = 'rgba(255, 222, 150, 0.12)';
+      ctx.beginPath();
+      ctx.arc(92, 84, 62, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 頭髮後輪廓
+      ctx.fillStyle = '#1c1713';
+      ctx.fillRect(56, 38, 66, 74);
+
+      // 臉
+      ctx.fillStyle = skin;
+      ctx.fillRect(66, 42, 46, 44);
+
+      // 頭髮瀏海
+      ctx.fillStyle = '#16120f';
+      ctx.fillRect(62, 34, 54, 18);
+      ctx.fillRect(60, 44, 10, 16);
+      ctx.fillRect(108, 44, 8, 14);
+
+      // 眼睛
+      ctx.fillStyle = '#fff8ea';
+      ctx.fillRect(76, 58, 6, 4);
+      ctx.fillRect(96, 58, 6, 4);
+
+      // 眼珠
+      ctx.fillStyle = '#2d241d';
+      ctx.fillRect(78, 59, 2, 2);
+      ctx.fillRect(98, 59, 2, 2);
+
+      // 鼻口
+      ctx.fillStyle = '#8b6a57';
+      ctx.fillRect(88, 65, 3, 6);
+      ctx.fillStyle = '#6b4434';
+      ctx.fillRect(84, 74, 10, 3);
+
+      // 頸部
+      ctx.fillStyle = skin;
+      ctx.fillRect(80, 86, 16, 12);
+
+      // 上半身衣服
+      ctx.fillStyle = clothes;
+      ctx.fillRect(50, 98, 78, 58);
+
+      // 肩膀
+      ctx.fillRect(42, 108, 20, 26);
+      ctx.fillRect(116, 108, 20, 26);
+
+      // 傳統紋樣
+      ctx.fillStyle = '#efe8d4';
+      ctx.fillRect(84, 100, 8, 50);
+      ctx.fillRect(69, 118, 6, 18);
+      ctx.fillRect(101, 118, 6, 18);
+
+      if (isElder) {
+        // 長老較沉穩的披飾
+        ctx.fillStyle = '#c2b18b';
+        ctx.fillRect(63, 108, 50, 6);
+        ctx.fillRect(72, 114, 8, 18);
+        ctx.fillRect(97, 114, 8, 18);
+      } else {
+        // 屋內長者略溫暖的裝飾
+        ctx.fillStyle = '#d6c3a1';
+        ctx.fillRect(68, 108, 40, 5);
+        ctx.fillRect(76, 114, 6, 16);
+        ctx.fillRect(94, 114, 6, 16);
+      }
+
+      // 外框
+      ctx.strokeStyle = '#e6c98a';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(18, 18, 144, 144);
+    }
+
+    function syncDialogueBox() {
+      const shouldShow = game.started && !!game.message;
+      dialogueEl.classList.toggle('active', shouldShow);
+      dialogueEl.classList.toggle('talking', shouldShow && game.isTalking);
+
+      const showPortrait =
+        shouldShow &&
+        game.isTalking &&
+        (game.currentSpeaker === 'elder' || game.currentSpeaker === 'interiorGuide');
+
+      dialogueEl.classList.toggle('show-portrait', showPortrait);
+      drawDialoguePortrait(showPortrait ? game.currentSpeaker : null);
+    }
+
+    function refreshDialogueUI() {
+      dialogueTitle.textContent = game.currentTitle;
+      dialogueText.textContent = game.message;
+      syncDialogueBox();
+    }
+
+    function setMessage(text, title = '魯凱族山田燒墾') {
+      game.message = text;
+      game.currentSpeaker = 'system';
+      game.currentTitle = title;
+      game.isTalking = false;
+      refreshDialogueUI();
     }
 
     function handleInteract() {
@@ -416,17 +641,17 @@
       }
 
       if (game.inHouse && isNear(player, game.interiorGuide, 50)) {
-        setMessage('屋內長者：石板屋是生活與記憶的所在。先熟悉家屋，再去山田與外面的長老對話。');
+        setDialogue('屋內長者：石板屋是生活與記憶的所在。先熟悉家屋，再去山田與外面的長老對話。');
         return;
       }
 
       if (!game.blessingDone && isNear(player, game.elder, 56)) {
         game.blessingStep++;
-        if (game.blessingStep === 1) setMessage('長老：這片山田還不能動手。先向祖靈祈福，再開始整理吧。');
-        else if (game.blessingStep === 2) setMessage('你與長老低聲祈禱，向土地、山林與祖靈表達敬意。');
+        if (game.blessingStep === 1) setDialogue('長老：這片山田還不能動手。先向祖靈祈福，再開始整理吧。');
+        else if (game.blessingStep === 2) setDialogue('你與長老低聲祈禱，向土地、山林與祖靈表達敬意。');
         else {
           game.blessingDone = true;
-          setMessage('祈福完成。現在可以整理荒田，把雜草與矮樹集中堆到右下角的堆置區。');
+          setDialogue('祈福完成。現在可以整理荒田，把雜草與矮樹集中堆到右下角的堆置區。');
         }
         updateUI();
         return;
@@ -477,7 +702,7 @@
       else missionEl.textContent = '任務完成：你完成了山田燒墾的整理與燃燒';
 
       statusEl.textContent = `場景：${game.inHouse ? '石板屋內' : '戶外'}｜祈福：${game.blessingDone ? '已完成' : '未完成'}｜整理：${Math.max(deposited, 0)} / ${total}${game.carrying ? '｜搬運中' : ''}${game.burningTriggered ? '｜燃燒中' : ''}`;
-      dialogueText.textContent = game.message;
+      refreshDialogueUI();
     }
 
     function loop() {
@@ -931,6 +1156,8 @@
       if (p.dir === 'left') ctx.fillRect(x + 34, y + 26, 3, 3);
       if (p.dir === 'right') ctx.fillRect(x + 46, y + 26, 3, 3);
       if (p.dir === 'up') ctx.fillRect(x + 40, y + 19, 3, 3);
+      
+      drawPlayerName();
     }
 
     function drawCarryIcon() {
@@ -946,14 +1173,86 @@
     }
 
     function drawQuestIcon(npc, symbol) {
-      const x = npc.x + 10;
-      const y = npc.y - 48;
-      ctx.fillStyle = '#fff4c4';
-      ctx.fillRect(x - 12, y - 8, 24, 24);
-      ctx.strokeStyle = '#6b4a23'; ctx.lineWidth = 2; ctx.strokeRect(x - 12, y - 8, 24, 24);
+      const spriteX = npc.x - 36;
+      const spriteY = npc.y - 108;
+
+      const cx = spriteX + 39;
+      const cy = spriteY - 18;
+
+      // 外層深色陰影
+      ctx.fillStyle = 'rgba(0,0,0,0.28)';
+      ctx.beginPath();
+      ctx.arc(cx, cy + 2, 20, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 主圓底
+      ctx.fillStyle = symbol === '!' ? '#fff2b8' : '#dff0ff';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 外框
+      ctx.strokeStyle = symbol === '!' ? '#7a4a16' : '#2b4f7a';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // 小跳動感：上方白色高光
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.beginPath();
+      ctx.arc(cx - 5, cy - 6, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 符號本體
       ctx.fillStyle = symbol === '!' ? '#d94d2f' : '#2f64b8';
-      ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(symbol, x, y + 4);
+      ctx.font = 'bold 24px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(symbol, cx, cy + 1);
+
+      // 底下小三角，讓它更像提示泡泡
+      ctx.fillStyle = symbol === '!' ? '#fff2b8' : '#dff0ff';
+      ctx.beginPath();
+      ctx.moveTo(cx - 6, cy + 15);
+      ctx.lineTo(cx + 6, cy + 15);
+      ctx.lineTo(cx, cy + 24);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = symbol === '!' ? '#7a4a16' : '#2b4f7a';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function drawPlayerName() {
+      if (!game.playerName) return;
+
+      const p = game.player;
+      const x = p.x - 36;
+      const y = p.y - 108;
+
+      const labelText = game.playerName;
+      ctx.font = 'bold 16px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      const textW = ctx.measureText(labelText).width;
+      const boxW = Math.max(44, textW + 18);
+      const boxH = 24;
+      const boxX = x + 40 - boxW / 2;
+      const boxY = y - 30;
+
+      // 半透明灰底
+      ctx.fillStyle = 'rgba(90, 90, 90, 0.68)';
+      ctx.fillRect(boxX, boxY, boxW, boxH);
+
+      // 細邊框
+      ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+      // 名字
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(labelText, x + 40, boxY + boxH / 2 + 1);
     }
 
     function drawDoorPrompt() {
