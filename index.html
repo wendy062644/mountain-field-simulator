@@ -242,6 +242,13 @@
       landReady: false,
       landPlots: [],
       landPrepared: false,
+
+      allSeeded: false,
+      birds: [],
+      birdTimer: 0,
+      scareCount: 0,
+      birdPhaseDone: false,
+
       houseDoorZone: null,
       houseExitZone: null,
       interiorGuide: null,
@@ -274,6 +281,11 @@
       game.landReady = false;
       game.landPlots = [];
       game.landPrepared = false;
+      game.allSeeded = false;
+      game.birds = [];
+      game.birdTimer = 0;
+      game.scareCount = 0;
+      game.birdPhaseDone = false;
       game.camera = { x: 0, y: 0 };
       game.started = false;
       game.message = '';
@@ -368,10 +380,10 @@
 
     function setupLandPlots() {
       game.landPlots = [
-        { x: 41.2 * TILE, y: 10.8 * TILE, w: 2.6 * TILE, h: 2.2 * TILE, prepared: false },
-        { x: 46.0 * TILE, y: 10.8 * TILE, w: 2.8 * TILE, h: 2.2 * TILE, prepared: false },
-        { x: 41.6 * TILE, y: 15.0 * TILE, w: 2.7 * TILE, h: 2.3 * TILE, prepared: false },
-        { x: 46.1 * TILE, y: 15.1 * TILE, w: 2.8 * TILE, h: 2.3 * TILE, prepared: false }
+        { x: 41.2 * TILE, y: 10.8 * TILE, w: 2.6 * TILE, h: 2.2 * TILE, prepared: false, seeded: false },
+        { x: 46.0 * TILE, y: 10.8 * TILE, w: 2.8 * TILE, h: 2.2 * TILE, prepared: false, seeded: false },
+        { x: 41.6 * TILE, y: 15.0 * TILE, w: 2.7 * TILE, h: 2.3 * TILE, prepared: false, seeded: false },
+        { x: 46.1 * TILE, y: 15.1 * TILE, w: 2.8 * TILE, h: 2.3 * TILE, prepared: false, seeded: false }
       ];
     }
 
@@ -776,6 +788,45 @@
           return;
         }
       }
+
+      if (!game.inHouse && game.landPrepared && !game.allSeeded) {
+        const plot = game.landPlots.find(p => p.prepared && !p.seeded && isNear(player, p, 44));
+        if (plot) {
+          plot.seeded = true;
+
+          const done = game.landPlots.filter(p => p.seeded).length;
+          const total = game.landPlots.length;
+
+          if (done < total) {
+            setMessage(`你將小米種子撒入土地。播種進度：${done} / ${total}`);
+          } else {
+            game.allSeeded = true;
+            setDialogue('播種完成。接下來要守護山田，避免鳥群啄食種子。', 'elder');
+          }
+
+          updateUI();
+          return;
+        }
+      }
+
+      if (!game.inHouse && game.allSeeded && !game.birdPhaseDone) {
+        const bird = game.birds.find(b => !b.scared && isNear(player, b, 56));
+        if (bird) {
+          bird.scared = true;
+          game.scareCount++;
+
+          if (game.scareCount < 5) {
+            setMessage(`你揮手驅趕鳥群！驅鳥進度：${game.scareCount} / 5`);
+          } else {
+            game.birdPhaseDone = true;
+            game.birds = [];
+            setDialogue('很好，你守住了山田。這片土地會記住你的努力。', 'elder');
+          }
+
+          updateUI();
+          return;
+        }
+      }
     }
 
     function updateBurning() {
@@ -788,6 +839,63 @@
         setupLandPlots();
         setDialogue('火勢已經退去，地面覆上一層灰燼。接下來要開始整地，把土地整理平順，準備播種。', 'elder');
         updateUI();
+      }
+    }
+
+    function spawnBird() {
+      const seededPlots = game.landPlots.filter(p => p.seeded);
+      if (seededPlots.length === 0) return;
+
+      const plot = seededPlots[Math.floor(Math.random() * seededPlots.length)];
+
+      game.birds.push({
+        x: plot.x + plot.w / 2 - 6,
+        y: plot.y - 20,
+        w: 12,
+        h: 8,
+        target: plot,
+        scared: false,
+        vy: 0.25
+      });
+    }
+
+    function updateBirds() {
+      if (!game.allSeeded || game.birdPhaseDone) return;
+
+      game.birdTimer++;
+      if (game.birdTimer >= 120 && game.birds.length < 3) {
+        spawnBird();
+        game.birdTimer = 0;
+      }
+
+      for (const bird of game.birds) {
+        if (bird.scared) {
+          bird.y -= 2.2;
+          bird.x += 1.2;
+          continue;
+        }
+
+        const targetY = bird.target.y + 10;
+        if (bird.y < targetY) {
+          bird.y += bird.vy;
+        }
+      }
+
+      game.birds = game.birds.filter(b => b.y > -40 && b.x < WORLD.w * TILE + 40);
+    }
+
+    function drawBirds() {
+      for (const b of game.birds) {
+        if (b.scared) continue;
+
+        ctx.fillStyle = '#2b2b2b';
+        ctx.fillRect(b.x, b.y, 12, 8);
+
+        ctx.fillRect(b.x - 4, b.y + 2, 5, 2);
+        ctx.fillRect(b.x + 11, b.y + 2, 5, 2);
+
+        ctx.fillStyle = '#4a4a4a';
+        ctx.fillRect(b.x + 2, b.y - 2, 4, 2);
       }
     }
 
@@ -807,18 +915,26 @@
         missionEl.textContent = '任務：等待火勢退去';
       } else if (!game.landPrepared) {
         missionEl.textContent = '任務：進入山田整地，將土地整理平順';
+      } else if (!game.allSeeded) {
+        missionEl.textContent = '任務：在山田播種小米';
+      } else if (!game.birdPhaseDone) {
+        missionEl.textContent = `任務：驅趕鳥群（${game.scareCount} / 5）`;
       } else {
-        missionEl.textContent = '任務完成：你完成了山田燒墾、燃燒與整地';
+        missionEl.textContent = '任務完成：你完成了播種與驅鳥';
       }
 
       const preparedCount = game.landPlots.filter(p => p.prepared).length;
       const preparedTotal = game.landPlots.length;
+      const seededCount = game.landPlots.filter(p => p.seeded).length;
+      const seededTotal = game.landPlots.length;
 
       statusEl.textContent =
         `場景：${game.inHouse ? '石板屋內' : '戶外'}｜祈福：${game.blessingDone ? '已完成' : '未完成'}｜整理：${Math.max(deposited, 0)} / ${total}` +
         `${game.carrying ? '｜搬運中' : ''}` +
         `${game.burningTriggered ? '｜燃燒中' : ''}` +
-        `${game.landReady ? `｜整地：${preparedCount} / ${preparedTotal}` : ''}`;
+        `${game.landReady ? `｜整地：${preparedCount} / ${preparedTotal}` : ''}` +
+        `${game.landPrepared ? `｜播種：${seededCount} / ${seededTotal}` : ''}` +
+        `${game.allSeeded && !game.birdPhaseDone ? `｜驅鳥：${game.scareCount} / 5` : ''}`;
       refreshDialogueUI();
     }
 
@@ -827,6 +943,7 @@
         movePlayer();
         handleInteract();
         updateBurning();
+        updateBirds();
         updateCamera();
       }
       render();
@@ -854,6 +971,7 @@
         drawHouseArea();
         drawField();
         drawLandPlots();
+        drawBirds();
         drawBlocks();
         drawWeeds();
         drawStackZone();
@@ -964,7 +1082,6 @@
           ctx.lineWidth = 2;
           ctx.strokeRect(plot.x, plot.y, plot.w, plot.h);
 
-          // 未整地：稍亂的灰燼與土塊線條
           ctx.strokeStyle = 'rgba(90, 70, 40, 0.6)';
           for (let i = 0; i < 4; i++) {
             const yy = plot.y + 8 + i * 14;
@@ -977,7 +1094,6 @@
           ctx.fillStyle = 'rgba(150, 110, 62, 0.28)';
           ctx.fillRect(plot.x, plot.y, plot.w, plot.h);
 
-          // 已整地：較整齊的平行耙紋
           ctx.strokeStyle = 'rgba(120, 82, 42, 0.7)';
           ctx.lineWidth = 2;
           for (let i = 0; i < 5; i++) {
@@ -986,6 +1102,26 @@
             ctx.moveTo(plot.x + 6, yy);
             ctx.lineTo(plot.x + plot.w - 6, yy);
             ctx.stroke();
+          }
+        }
+
+        // 已播種：覆蓋一層較深土色 + 固定種子點
+        if (plot.seeded) {
+          ctx.fillStyle = 'rgba(120, 80, 40, 0.22)';
+          ctx.fillRect(plot.x, plot.y, plot.w, plot.h);
+
+          ctx.fillStyle = '#2e1d0f';
+          const cols = 5;
+          const rows = 4;
+          const gapX = plot.w / (cols + 1);
+          const gapY = plot.h / (rows + 1);
+
+          for (let ry = 1; ry <= rows; ry++) {
+            for (let cx = 1; cx <= cols; cx++) {
+              const px = plot.x + cx * gapX;
+              const py = plot.y + ry * gapY;
+              ctx.fillRect(px, py, 2, 2);
+            }
           }
         }
       }
