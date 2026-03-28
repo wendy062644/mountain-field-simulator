@@ -239,6 +239,9 @@
       burningTriggered: false,
       burningProgress: 0,
       inHouse: false,
+      landReady: false,
+      landPlots: [],
+      landPrepared: false,
       houseDoorZone: null,
       houseExitZone: null,
       interiorGuide: null,
@@ -268,6 +271,9 @@
       game.burningTriggered = false;
       game.burningProgress = 0;
       game.inHouse = false;
+      game.landReady = false;
+      game.landPlots = [];
+      game.landPrepared = false;
       game.camera = { x: 0, y: 0 };
       game.started = false;
       game.message = '';
@@ -335,15 +341,38 @@
 
       // 入口左側保留開口，右下留出堆置區通道
       const spots = [
-        [41,10],[43,10],[45,10],[47,10],[49,10],
-        [40,12],[42,12],[44,12],[46,12],[50,12],
-        [41,14],[43,14],[45,14],[47,14],[49,14],
-        [40,16],[42,16],[44,16],[46,16],[50,16],
-        [41,18],[43,18],[45,18],[47,18],[49,18]
+        [41,10],[45,10],[49,10],
+        [40,12],[44,12],[50,12],
+        [41,14],[45,14],[49,14],
+        [42,16],[46,16],
+        [43,18],[47,18]
       ];
+      const specialKinds = {
+        2: 'wildflower',
+        6: 'stone',
+        10: 'nest'
+      };
+
       spots.forEach(([x,y], i) => {
-        game.weeds.push({ x: x * TILE + 5, y: y * TILE + 6, w: 22, h: 20, cleared: false, id: i });
+        game.weeds.push({
+          x: x * TILE + 5,
+          y: y * TILE + 6,
+          w: 22,
+          h: 20,
+          cleared: false,
+          id: i,
+          kind: specialKinds[i] || 'normal'
+        });
       });
+    }
+
+    function setupLandPlots() {
+      game.landPlots = [
+        { x: 41.2 * TILE, y: 10.8 * TILE, w: 2.6 * TILE, h: 2.2 * TILE, prepared: false },
+        { x: 46.0 * TILE, y: 10.8 * TILE, w: 2.8 * TILE, h: 2.2 * TILE, prepared: false },
+        { x: 41.6 * TILE, y: 15.0 * TILE, w: 2.7 * TILE, h: 2.3 * TILE, prepared: false },
+        { x: 46.1 * TILE, y: 15.1 * TILE, w: 2.8 * TILE, h: 2.3 * TILE, prepared: false }
+      ];
     }
 
     function addBlock(tx, ty, tw, th, type) {
@@ -430,13 +459,25 @@
     function collides(box) {
       if (game.inHouse) {
         const roomBounds = { x: 80, y: 130, w: canvas.width - 160, h: canvas.height - 150 };
-        return (
+
+        const hitRoomEdge =
           box.x < roomBounds.x ||
           box.y < roomBounds.y ||
           box.x + box.w > roomBounds.x + roomBounds.w ||
-          box.y + box.h > roomBounds.y + roomBounds.h
-        );
+          box.y + box.h > roomBounds.y + roomBounds.h;
+
+        if (hitRoomEdge) return true;
+
+        // 室內 NPC 防撞
+        const guideHitbox = getNPCCollider(game.interiorGuide);
+        if (rectsOverlap(box, guideHitbox)) return true;
+
+        return false;
       }
+
+      // 室外 NPC 防撞
+      const elderHitbox = getNPCCollider(game.elder);
+      if (rectsOverlap(box, elderHitbox)) return true;
 
       for (const b of game.blocks) {
         if (b.type === 'house') {
@@ -476,6 +517,15 @@
       if (!collides(nextX)) p.x += dx;
       const nextY = { x: p.x, y: p.y + dy, w: p.w, h: p.h };
       if (!collides(nextY)) p.y += dy;
+    }
+
+    function getNPCCollider(npc) {
+      return {
+        x: npc.x + 1,
+        y: npc.y + 2,
+        w: npc.w - 2,
+        h: npc.h - 2
+      };
     }
 
     function isNear(a, b, d = 36) {
@@ -641,17 +691,17 @@
       }
 
       if (game.inHouse && isNear(player, game.interiorGuide, 50)) {
-        setDialogue('屋內長者：石板屋是生活與記憶的所在。先熟悉家屋，再去山田與外面的長老對話。');
+        setDialogue('石板屋是生活與記憶的所在。先熟悉家屋，再去山田與外面的長老對話。', 'interiorGuide');
         return;
       }
 
       if (!game.blessingDone && isNear(player, game.elder, 56)) {
         game.blessingStep++;
-        if (game.blessingStep === 1) setDialogue('長老：這片山田還不能動手。先向祖靈祈福，再開始整理吧。');
-        else if (game.blessingStep === 2) setDialogue('你與長老低聲祈禱，向土地、山林與祖靈表達敬意。');
+        if (game.blessingStep === 1) setDialogue('這片山田還不能動手。先向祖靈祈福，再開始整理吧。', 'elder');
+        else if (game.blessingStep === 2) setDialogue('你與長老低聲祈禱，向土地、山林與祖靈表達敬意。', 'elder');
         else {
           game.blessingDone = true;
-          setDialogue('祈福完成。現在可以整理荒田，把雜草與矮樹集中堆到右下角的堆置區。');
+          setDialogue('祈福完成。現在可以整理荒田，把雜草與矮樹集中堆到右下角的堆置區。', 'elder');
         }
         updateUI();
         return;
@@ -662,7 +712,17 @@
         if (weed) {
           weed.cleared = true;
           game.carrying = true;
-          setMessage('你砍下並整理了一份雜草／矮樹。把它帶到堆置區。');
+
+          if (weed.kind === 'wildflower') {
+            setMessage('你在草叢裡發現一小束野花。你小心把它放到一旁，再把雜草帶去堆置區。');
+          } else if (weed.kind === 'stone') {
+            setMessage('草叢下露出一塊特別的石片，像是舊山田留下的痕跡。你記住了這個地方，再把草木搬去堆置區。');
+          } else if (weed.kind === 'nest') {
+            setMessage('你差點碰到一個小鳥巢，趕緊避開，把旁邊的雜草整理好後帶去堆置區。');
+          } else {
+            setMessage('你砍下並整理了一份雜草／矮樹。把它帶到堆置區。');
+          }
+
           updateUI();
           return;
         }
@@ -670,11 +730,23 @@
 
       if (!game.inHouse && game.carrying && isNear(player, game.stackZone, 58)) {
         game.carrying = false;
-        setMessage('你把整理好的草木堆放在指定地點。');
+
+        const depositedNow = game.weeds.filter(w => w.cleared).length;
+        const totalNow = game.weeds.length;
+
+        if (depositedNow === Math.ceil(totalNow / 3)) {
+          setMessage('你把第一批草木堆好，山田開始露出原本的輪廓。');
+        } else if (depositedNow === Math.ceil(totalNow * 2 / 3)) {
+          setMessage('整理進度過半，山田看起來清爽多了。');
+        } else {
+          setMessage('你把整理好的草木堆放在指定地點。');
+        }
+
         if (game.weeds.every(w => w.cleared)) {
           game.allCleared = true;
           setMessage('荒田已整理完成。再到堆置區按空白鍵，即可觸發燃燒。');
         }
+
         updateUI();
         return;
       }
@@ -684,24 +756,69 @@
         setMessage('你點燃堆置的草木，火勢受控地燃起。山田燒墾進入下一步。');
         updateUI();
       }
+
+      if (!game.inHouse && game.landReady && !game.landPrepared) {
+        const plot = game.landPlots.find(p => !p.prepared && isNear(player, p, 44));
+        if (plot) {
+          plot.prepared = true;
+
+          const done = game.landPlots.filter(p => p.prepared).length;
+          const total = game.landPlots.length;
+
+          if (done < total) {
+            setMessage(`你用工具把灰燼與土塊整理平順。整地進度：${done} / ${total}`);
+          } else {
+            game.landPrepared = true;
+            setDialogue('整地完成了。土地已經平順，山田準備好迎接下一個播種時節。', 'elder');
+          }
+
+          updateUI();
+          return;
+        }
+      }
     }
 
     function updateBurning() {
       if (!game.burningTriggered) return;
+
       game.burningProgress = Math.min(1, game.burningProgress + 0.0035);
+
+      if (game.burningProgress >= 1 && !game.landReady) {
+        game.landReady = true;
+        setupLandPlots();
+        setDialogue('火勢已經退去，地面覆上一層灰燼。接下來要開始整地，把土地整理平順，準備播種。', 'elder');
+        updateUI();
+      }
     }
 
     function updateUI() {
       const total = game.weeds.length;
       const deposited = game.weeds.filter(w => w.cleared).length - (game.carrying ? 1 : 0);
 
-      if (game.inHouse) missionEl.textContent = '任務：探索石板屋，靠近門口按空白鍵可離開';
-      else if (!game.blessingDone) missionEl.textContent = '任務：到山田與長老對話，完成祈福';
-      else if (!game.allCleared) missionEl.textContent = game.carrying ? '任務：把草木搬到右下角堆置區' : '任務：繼續整理荒田';
-      else if (!game.burningTriggered) missionEl.textContent = '任務：前往堆置區，觸發燃燒';
-      else missionEl.textContent = '任務完成：你完成了山田燒墾的整理與燃燒';
+      if (game.inHouse) {
+        missionEl.textContent = '任務：探索石板屋，靠近門口按空白鍵可離開';
+      } else if (!game.blessingDone) {
+        missionEl.textContent = '任務：到山田與長老對話，完成祈福';
+      } else if (!game.allCleared) {
+        missionEl.textContent = game.carrying ? '任務：把草木搬到右下角堆置區' : '任務：繼續整理荒田';
+      } else if (!game.burningTriggered) {
+        missionEl.textContent = '任務：前往堆置區，觸發燃燒';
+      } else if (!game.landReady) {
+        missionEl.textContent = '任務：等待火勢退去';
+      } else if (!game.landPrepared) {
+        missionEl.textContent = '任務：進入山田整地，將土地整理平順';
+      } else {
+        missionEl.textContent = '任務完成：你完成了山田燒墾、燃燒與整地';
+      }
 
-      statusEl.textContent = `場景：${game.inHouse ? '石板屋內' : '戶外'}｜祈福：${game.blessingDone ? '已完成' : '未完成'}｜整理：${Math.max(deposited, 0)} / ${total}${game.carrying ? '｜搬運中' : ''}${game.burningTriggered ? '｜燃燒中' : ''}`;
+      const preparedCount = game.landPlots.filter(p => p.prepared).length;
+      const preparedTotal = game.landPlots.length;
+
+      statusEl.textContent =
+        `場景：${game.inHouse ? '石板屋內' : '戶外'}｜祈福：${game.blessingDone ? '已完成' : '未完成'}｜整理：${Math.max(deposited, 0)} / ${total}` +
+        `${game.carrying ? '｜搬運中' : ''}` +
+        `${game.burningTriggered ? '｜燃燒中' : ''}` +
+        `${game.landReady ? `｜整地：${preparedCount} / ${preparedTotal}` : ''}`;
       refreshDialogueUI();
     }
 
@@ -736,6 +853,7 @@
         drawRoad();
         drawHouseArea();
         drawField();
+        drawLandPlots();
         drawBlocks();
         drawWeeds();
         drawStackZone();
@@ -830,6 +948,45 @@
       for (let y = 9; y < 20; y++) {
         for (let x = 40; x < 51; x++) {
           ctx.fillRect(x * TILE + 2, y * TILE + 20, TILE - 4, 2);
+        }
+      }
+    }
+
+    function drawLandPlots() {
+      if (!game.landReady) return;
+
+      for (const plot of game.landPlots) {
+        if (!plot.prepared) {
+          ctx.fillStyle = 'rgba(70, 55, 30, 0.32)';
+          ctx.fillRect(plot.x, plot.y, plot.w, plot.h);
+
+          ctx.strokeStyle = 'rgba(255, 234, 170, 0.72)';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(plot.x, plot.y, plot.w, plot.h);
+
+          // 未整地：稍亂的灰燼與土塊線條
+          ctx.strokeStyle = 'rgba(90, 70, 40, 0.6)';
+          for (let i = 0; i < 4; i++) {
+            const yy = plot.y + 8 + i * 14;
+            ctx.beginPath();
+            ctx.moveTo(plot.x + 8, yy);
+            ctx.lineTo(plot.x + plot.w - 8, yy + ((i % 2) ? 3 : -2));
+            ctx.stroke();
+          }
+        } else {
+          ctx.fillStyle = 'rgba(150, 110, 62, 0.28)';
+          ctx.fillRect(plot.x, plot.y, plot.w, plot.h);
+
+          // 已整地：較整齊的平行耙紋
+          ctx.strokeStyle = 'rgba(120, 82, 42, 0.7)';
+          ctx.lineWidth = 2;
+          for (let i = 0; i < 5; i++) {
+            const yy = plot.y + 8 + i * 12;
+            ctx.beginPath();
+            ctx.moveTo(plot.x + 6, yy);
+            ctx.lineTo(plot.x + plot.w - 6, yy);
+            ctx.stroke();
+          }
         }
       }
     }
