@@ -42,21 +42,22 @@
       pointer-events: none;
     }
     #topbar {
-      top: 10px;
+      top: 16px;
       display: flex;
       justify-content: space-between;
-      gap: 12px;
+      gap: 18px;
       color: var(--ui-text);
       font-weight: 700;
       text-shadow: 0 2px 0 rgba(0,0,0,0.35);
     }
+
     .badge {
       background: var(--ui-bg);
-      border: 2px solid var(--ui-border);
-      border-radius: 12px;
-      padding: 8px 12px;
-      font-size: 14px;
-      line-height: 1.45;
+      border: 3px solid var(--ui-border);
+      border-radius: 16px;
+      padding: 14px 20px;
+      font-size: 22px;
+      line-height: 1.5;
       box-shadow: 0 8px 20px rgba(0,0,0,0.22);
     }
     #dialogue {
@@ -243,6 +244,12 @@
       landPlots: [],
       landPrepared: false,
 
+      stoneStacks: [],
+      stoneWallBuilt: false,
+
+      scareDevices: [],
+      scareReady: false,
+
       allSeeded: false,
       birds: [],
       birdTimer: 0,
@@ -281,6 +288,11 @@
       game.landReady = false;
       game.landPlots = [];
       game.landPrepared = false;
+      game.stoneStacks = [];
+      game.stoneWallBuilt = false;
+
+      game.scareDevices = [];
+      game.scareReady = false;
       game.allSeeded = false;
       game.birds = [];
       game.birdTimer = 0;
@@ -384,6 +396,13 @@
         { x: 46.0 * TILE, y: 10.8 * TILE, w: 2.8 * TILE, h: 2.2 * TILE, prepared: false, seeded: false },
         { x: 41.6 * TILE, y: 15.0 * TILE, w: 2.7 * TILE, h: 2.3 * TILE, prepared: false, seeded: false },
         { x: 46.1 * TILE, y: 15.1 * TILE, w: 2.8 * TILE, h: 2.3 * TILE, prepared: false, seeded: false }
+      ];
+
+      game.stoneStacks = [
+        { x: 40.3 * TILE, y: 13.4 * TILE, w: 1.8 * TILE, h: 0.8 * TILE, done: false },
+        { x: 43.0 * TILE, y: 13.3 * TILE, w: 2.0 * TILE, h: 0.8 * TILE, done: false },
+        { x: 46.0 * TILE, y: 13.5 * TILE, w: 1.8 * TILE, h: 0.8 * TILE, done: false },
+        { x: 48.8 * TILE, y: 13.4 * TILE, w: 1.8 * TILE, h: 0.8 * TILE, done: false }
       ];
     }
 
@@ -769,19 +788,21 @@
         updateUI();
       }
 
-      if (!game.inHouse && game.landReady && !game.landPrepared) {
-        const plot = game.landPlots.find(p => !p.prepared && isNear(player, p, 44));
-        if (plot) {
-          plot.prepared = true;
+      if (!game.inHouse && game.landReady && !game.stoneWallBuilt) {
+        const stack = game.stoneStacks.find(s => !s.done && isNear(player, s, 44));
+        if (stack) {
+          stack.done = true;
 
-          const done = game.landPlots.filter(p => p.prepared).length;
-          const total = game.landPlots.length;
+          const done = game.stoneStacks.filter(s => s.done).length;
+          const total = game.stoneStacks.length;
 
           if (done < total) {
-            setMessage(`你用工具把灰燼與土塊整理平順。整地進度：${done} / ${total}`);
+            setMessage(`你仔細堆疊石頭，讓擋土牆更穩固。石牆進度：${done} / ${total}`);
           } else {
+            game.stoneWallBuilt = true;
             game.landPrepared = true;
-            setDialogue('整地完成了。土地已經平順，山田準備好迎接下一個播種時節。', 'elder');
+            game.landPlots.forEach(p => p.prepared = true);
+            setDialogue('石牆已經堆好，山田更穩固了。接下來可以開始播種。', 'elder');
           }
 
           updateUI();
@@ -801,7 +822,8 @@
             setMessage(`你將小米種子撒入土地。播種進度：${done} / ${total}`);
           } else {
             game.allSeeded = true;
-            setDialogue('播種完成。接下來要守護山田，避免鳥群啄食種子。', 'elder');
+            setupScareDevices();
+            setDialogue('播種完成。先在田邊架設驅鳥器具，再開始守護山田。', 'elder');
           }
 
           updateUI();
@@ -809,18 +831,52 @@
         }
       }
 
-      if (!game.inHouse && game.allSeeded && !game.birdPhaseDone) {
-        const bird = game.birds.find(b => !b.scared && isNear(player, b, 56));
-        if (bird) {
-          bird.scared = true;
+      if (!game.inHouse && game.allSeeded && !game.scareReady) {
+        const device = game.scareDevices.find(d => !d.placed && isNear(player, d, 42));
+        if (device) {
+          device.placed = true;
+
+          const done = game.scareDevices.filter(d => d.placed).length;
+          const total = game.scareDevices.length;
+
+          if (done < total) {
+            setMessage(`你架好了其中一組驅鳥器具。設置進度：${done} / ${total}`);
+          } else {
+            game.scareReady = true;
+            setDialogue('驅鳥器具已設置完成。鳥群來時，去拉動繩子發出聲響。', 'elder');
+          }
+
+          updateUI();
+          return;
+        }
+      }
+
+      if (!game.inHouse && game.scareReady && !game.birdPhaseDone) {
+        const rope = game.scareDevices.find(
+          d => d.placed && isNear(player, { x: d.ropeX, y: d.ropeY, w: 18, h: 18 }, 42)
+        );
+
+        if (rope) {
+          const activeBirds = game.birds.filter(b => !b.scared);
+
+          if (activeBirds.length === 0) {
+            setMessage('你拉了繩子，鋁罐發出聲響，但現在還沒有鳥靠近山田。');
+            updateUI();
+            return;
+          }
+
+          for (const bird of activeBirds) {
+            bird.scared = true;
+          }
+
           game.scareCount++;
 
           if (game.scareCount < 5) {
-            setMessage(`你揮手驅趕鳥群！驅鳥進度：${game.scareCount} / 5`);
+            setMessage(`你拉動繩子，鋁罐發出聲響，鳥群被驚走了！驅鳥進度：${game.scareCount} / 5`);
           } else {
             game.birdPhaseDone = true;
             game.birds = [];
-            setDialogue('很好，你守住了山田。這片土地會記住你的努力。', 'elder');
+            setDialogue('很好，你用驅鳥器具守住了山田。', 'elder');
           }
 
           updateUI();
@@ -859,8 +915,15 @@
       });
     }
 
+    function setupScareDevices() {
+      game.scareDevices = [
+        { x: 40.5 * TILE, y: 9.5 * TILE, w: 18, h: 36, placed: false, ropeX: 42.2 * TILE, ropeY: 11.3 * TILE },
+        { x: 50.8 * TILE, y: 9.7 * TILE, w: 18, h: 36, placed: false, ropeX: 48.8 * TILE, ropeY: 11.5 * TILE }
+      ];
+    }
+
     function updateBirds() {
-      if (!game.allSeeded || game.birdPhaseDone) return;
+      if (!game.allSeeded || !game.scareReady || game.birdPhaseDone) return;
 
       game.birdTimer++;
       if (game.birdTimer >= 120 && game.birds.length < 3) {
@@ -899,6 +962,39 @@
       }
     }
 
+    function drawScareDevices() {
+      for (const d of game.scareDevices) {
+        // 竹竿
+        if (d.placed) {
+          ctx.fillStyle = '#7a5b2b';
+          ctx.fillRect(d.x, d.y, 4, 36);
+        } else {
+          ctx.fillStyle = 'rgba(255, 236, 170, 0.65)';
+          ctx.fillRect(d.x - 4, d.y + 28, 12, 6);
+        }
+
+        if (d.placed) {
+          // 鋁罐
+          ctx.fillStyle = '#c8c8c8';
+          ctx.fillRect(d.x + 4, d.y + 6, 10, 8);
+          ctx.fillRect(d.x + 6, d.y + 16, 10, 8);
+          ctx.fillRect(d.x + 4, d.y + 26, 10, 8);
+
+          // 繩子
+          ctx.strokeStyle = '#d8c28a';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(d.x + 2, d.y + 8);
+          ctx.lineTo(d.ropeX, d.ropeY);
+          ctx.stroke();
+
+          // 拉繩點
+          ctx.fillStyle = '#f2e2a8';
+          ctx.fillRect(d.ropeX - 5, d.ropeY - 5, 10, 10);
+        }
+      }
+    }
+
     function updateUI() {
       const total = game.weeds.length;
       const deposited = game.weeds.filter(w => w.cleared).length - (game.carrying ? 1 : 0);
@@ -913,12 +1009,14 @@
         missionEl.textContent = '任務：前往堆置區，觸發燃燒';
       } else if (!game.landReady) {
         missionEl.textContent = '任務：等待火勢退去';
-      } else if (!game.landPrepared) {
-        missionEl.textContent = '任務：進入山田整地，將土地整理平順';
+      } else if (!game.stoneWallBuilt) {
+        missionEl.textContent = '任務：堆疊石頭，完成山田擋土牆';
       } else if (!game.allSeeded) {
         missionEl.textContent = '任務：在山田播種小米';
+      } else if (!game.scareReady) {
+        missionEl.textContent = '任務：在田邊架設驅鳥器具';
       } else if (!game.birdPhaseDone) {
-        missionEl.textContent = `任務：驅趕鳥群（${game.scareCount} / 5）`;
+        missionEl.textContent = `任務：拉動繩索驅鳥（${game.scareCount} / 5）`;
       } else {
         missionEl.textContent = '任務完成：你完成了播種與驅鳥';
       }
@@ -932,9 +1030,10 @@
         `場景：${game.inHouse ? '石板屋內' : '戶外'}｜祈福：${game.blessingDone ? '已完成' : '未完成'}｜整理：${Math.max(deposited, 0)} / ${total}` +
         `${game.carrying ? '｜搬運中' : ''}` +
         `${game.burningTriggered ? '｜燃燒中' : ''}` +
-        `${game.landReady ? `｜整地：${preparedCount} / ${preparedTotal}` : ''}` +
+        `${game.landReady && !game.stoneWallBuilt ? `｜石牆：${game.stoneStacks.filter(s => s.done).length} / ${game.stoneStacks.length}` : ''}` +
         `${game.landPrepared ? `｜播種：${seededCount} / ${seededTotal}` : ''}` +
-        `${game.allSeeded && !game.birdPhaseDone ? `｜驅鳥：${game.scareCount} / 5` : ''}`;
+        `${game.allSeeded && !game.scareReady ? `｜器具：${game.scareDevices.filter(d => d.placed).length} / ${game.scareDevices.length}` : ''}` +
+        `${game.scareReady && !game.birdPhaseDone ? `｜驅鳥：${game.scareCount} / 5` : ''}`;
       refreshDialogueUI();
     }
 
@@ -971,6 +1070,7 @@
         drawHouseArea();
         drawField();
         drawLandPlots();
+        drawScareDevices();
         drawBirds();
         drawBlocks();
         drawWeeds();
@@ -1123,6 +1223,21 @@
               ctx.fillRect(px, py, 2, 2);
             }
           }
+        }
+      }
+
+      for (const s of game.stoneStacks) {
+        ctx.fillStyle = s.done ? '#6c6a67' : 'rgba(120, 120, 120, 0.45)';
+        ctx.fillRect(s.x, s.y, s.w, s.h);
+
+        ctx.strokeStyle = s.done ? '#3f3d3a' : 'rgba(255, 240, 200, 0.65)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(s.x, s.y, s.w, s.h);
+
+        // 石頭紋理
+        ctx.fillStyle = s.done ? '#8c8a86' : '#9d9a95';
+        for (let i = 0; i < 4; i++) {
+          ctx.fillRect(s.x + 6 + i * 12, s.y + 4 + (i % 2) * 4, 10, 4);
         }
       }
     }
