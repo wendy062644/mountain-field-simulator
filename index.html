@@ -239,6 +239,7 @@
       allCleared: false,
       burningTriggered: false,
       burningProgress: 0,
+      ashReady: false,
       inHouse: false,
       landReady: false,
       landPlots: [],
@@ -273,7 +274,7 @@
       prayer:     { x: 38.4 * TILE, y: 14.5 * TILE }, // 農田入口外側
       brushGuide: { x: 50.6 * TILE, y: 18.2 * TILE }, // 右下堆置區旁
       burnWatch:  { x: 44.0 * TILE, y: 8.8  * TILE }, // 上方防火道旁
-      stoneGuide: { x: 50.6 * TILE, y: 13.8 * TILE }, // 石牆右側
+      stoneGuide: { x: 52.6 * TILE, y: 13.8 * TILE }, // 石牆右側
       sowGuide:   { x: 40.6 * TILE, y: 18.6 * TILE }, // 左下田邊
       birdGuide:  { x: 38.4 * TILE, y: 15.2 * TILE }, // 入口旁，方便看驅鳥
       rest:       { x: 34.8 * TILE, y: 14.6 * TILE }  // 田外小路
@@ -301,6 +302,7 @@
       game.allCleared = false;
       game.burningTriggered = false;
       game.burningProgress = 0;
+      game.ashReady = false;
       game.inHouse = false;
       game.landReady = false;
       game.landPlots = [];
@@ -831,7 +833,7 @@
         return;
       }
 
-      if (!game.inHouse && game.allCleared && !game.carrying && isNear(player, game.stackZone, 58) && !game.burningTriggered) {
+      if (!game.inHouse && game.allCleared && !game.carrying && isNear(player, game.stackZone, 58) && !game.burningTriggered && !game.ashReady) {
         game.burningTriggered = true;
         setMessage('你點燃堆置的草木，火勢受控地燃起。長老正在上方看著火路。');
         updateUI();
@@ -941,13 +943,15 @@
     function updateBurning() {
       if (!game.burningTriggered) return;
 
-      game.burningProgress = Math.min(1, game.burningProgress + 0.0035);
+      game.burningProgress = Math.min(1, game.burningProgress + 0.0015);
 
       if (game.burningProgress >= 1 && !game.landReady) {
+        game.burningTriggered = false;  // 火熄掉
+        game.ashReady = true;           // 改成灰燼狀態
         game.landReady = true;
         setupLandPlots();
         moveElderTo('stoneGuide');
-        setDialogue('火勢退去後，先整理田地，沿邊把石頭堆穩，顧住土。', 'elder');
+        setDialogue('火勢退去後，地上留下灰燼。先整理田地，沿邊把石頭堆穩，顧住土。', 'elder');
         updateUI();
       }
     }
@@ -983,7 +987,7 @@
       if (!game.allSeeded || !game.scareReady || game.birdPhaseDone) return;
 
       game.birdTimer++;
-      if (game.birdTimer >= 120 && game.birds.length < 3) {
+      if (game.birdTimer >= 600 && game.birds.length < 3) {
         spawnBird();
         game.birdTimer = 0;
       }
@@ -1048,6 +1052,208 @@
           // 拉繩點
           ctx.fillStyle = '#f2e2a8';
           ctx.fillRect(d.ropeX - 5, d.ropeY - 5, 10, 10);
+        }
+      }
+    }
+
+    function drawTaskGlow(box, color = 'rgba(255, 245, 200, 0.18)', pad = 10) {
+      const x = box.x - pad;
+      const y = box.y - pad;
+      const w = box.w + pad * 2;
+      const h = box.h + pad * 2;
+      const cx = x + w / 2;
+      const cy = y + h / 2;
+      const r = Math.max(w, h) * 0.75;
+
+      ctx.save();
+
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      g.addColorStop(0, color);
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+
+      ctx.strokeStyle = 'rgba(255, 245, 215, 0.45)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(x, y, w, h);
+
+      ctx.restore();
+    }
+
+    function drawPendingTaskGlows() {
+      if (game.inHouse) return;
+
+      // 祈福：長老
+      if (!game.blessingDone) {
+        drawTaskGlow(game.elder, 'rgba(255, 245, 200, 0.18)', 12);
+        return;
+      }
+
+      // 整理草木
+      if (!game.allCleared) {
+        if (game.carrying) {
+          drawTaskGlow(game.stackZone, 'rgba(255, 230, 180, 0.20)', 12);
+        } else {
+          for (const w of game.weeds) {
+            if (!w.cleared) {
+              drawTaskGlow({ x: w.x, y: w.y, w: w.w, h: w.h }, 'rgba(230, 255, 210, 0.14)', 8);
+            }
+          }
+        }
+        return;
+      }
+
+      // 點火
+      if (!game.burningTriggered && !game.ashReady && !game.landReady) {
+        drawTaskGlow(game.stackZone, 'rgba(255, 210, 150, 0.22)', 14);
+        return;
+      }
+
+      // 等待火勢退去
+      if (!game.landReady) {
+        drawTaskGlow(game.stackZone, 'rgba(255, 185, 120, 0.16)', 16);
+        return;
+      }
+
+      // 堆石牆：全部未完成石堆一起亮
+      if (!game.stoneWallBuilt) {
+        for (const s of game.stoneStacks) {
+          if (!s.done) {
+            drawTaskGlow(s, 'rgba(220, 235, 255, 0.16)', 8);
+          }
+        }
+        return;
+      }
+
+      // 播種：全部未播種區塊一起亮
+      if (!game.allSeeded) {
+        for (const p of game.landPlots) {
+          if (p.prepared && !p.seeded) {
+            drawTaskGlow(p, 'rgba(255, 245, 175, 0.16)', 8);
+          }
+        }
+        return;
+      }
+
+      // 架設驅鳥器具：全部未放置器具一起亮
+      if (!game.scareReady) {
+        for (const d of game.scareDevices) {
+          if (!d.placed) {
+            drawTaskGlow(d, 'rgba(235, 245, 255, 0.18)', 10);
+          }
+        }
+        return;
+      }
+
+      // 驅鳥：全部拉繩點一起亮
+      if (!game.birdPhaseDone) {
+        for (const d of game.scareDevices) {
+          if (d.placed) {
+            drawTaskGlow({ x: d.ropeX - 6, y: d.ropeY - 6, w: 12, h: 12 }, 'rgba(255, 250, 210, 0.18)', 8);
+          }
+        }
+      }
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    function drawInteractOutline(box, radius = 6) {
+      const pad = 6;
+      const x = box.x - pad;
+      const y = box.y - pad;
+      const w = box.w + pad * 2;
+      const h = box.h + pad * 2;
+
+      ctx.save();
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.24)';
+      ctx.lineWidth = 8;
+      roundRect(ctx, x, y, w, h, radius);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(255,245,210,0.95)';
+      ctx.lineWidth = 2;
+      roundRect(ctx, x, y, w, h, radius);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawInteractionHints() {
+      const player = game.player;
+
+      if (!game.inHouse && isNear(player, game.houseDoorZone, 44)) {
+        drawInteractOutline(game.houseDoorZone);
+      }
+
+      if (game.inHouse && isNear(player, game.houseExitZone, 46)) {
+        drawInteractOutline(game.houseExitZone);
+      }
+
+      if (game.inHouse && isNear(player, game.interiorGuide, 50)) {
+        drawInteractOutline(game.interiorGuide);
+      }
+
+      if (!game.inHouse && isNear(player, game.elder, 56)) {
+        drawInteractOutline(game.elder);
+      }
+
+      if (!game.inHouse && game.blessingDone && !game.carrying) {
+        const weed = game.weeds.find(
+          w => !w.cleared && isNear(player, { x: w.x, y: w.y, w: w.w, h: w.h }, 34)
+        );
+        if (weed) {
+          drawInteractOutline({ x: weed.x, y: weed.y, w: weed.w, h: weed.h });
+        }
+      }
+
+      if (!game.inHouse && game.carrying && isNear(player, game.stackZone, 58)) {
+        drawInteractOutline(game.stackZone);
+      }
+
+      if (!game.inHouse && game.allCleared && !game.carrying && isNear(player, game.stackZone, 58) && !game.burningTriggered && !game.ashReady) {
+        drawInteractOutline(game.stackZone);
+      }
+
+      if (!game.inHouse && game.landReady && !game.stoneWallBuilt) {
+        const stack = game.stoneStacks.find(s => !s.done && isNear(player, s, 44));
+        if (stack) {
+          drawInteractOutline(stack);
+        }
+      }
+
+      if (!game.inHouse && game.landPrepared && !game.allSeeded) {
+        const plot = game.landPlots.find(p => p.prepared && !p.seeded && isNear(player, p, 44));
+        if (plot) {
+          drawInteractOutline(plot);
+        }
+      }
+
+      if (!game.inHouse && game.allSeeded && !game.scareReady) {
+        const device = game.scareDevices.find(d => !d.placed && isNear(player, d, 42));
+        if (device) {
+          drawInteractOutline(device);
+        }
+      }
+
+      if (!game.inHouse && game.scareReady && !game.birdPhaseDone) {
+        const rope = game.scareDevices.find(
+          d => d.placed && isNear(player, { x: d.ropeX, y: d.ropeY, w: 18, h: 18 }, 42)
+        );
+        if (rope) {
+          drawInteractOutline({ x: rope.ropeX, y: rope.ropeY, w: 18, h: 18 }, 4);
         }
       }
     }
@@ -1122,6 +1328,7 @@
       } else {
         ctx.save();
         ctx.translate(-game.camera.x, -game.camera.y);
+
         drawGround();
         drawRoad();
         drawHouseArea();
@@ -1132,6 +1339,10 @@
         drawBlocks();
         drawWeeds();
         drawStackZone();
+
+        // 先畫任務淡光，讓它在物件後面、人物前面
+        drawPendingTaskGlows();
+
         drawNPC(game.elder, '#1a1a1a', '#d0b98c');
 
         if (!game.blessingDone) {
@@ -1140,10 +1351,13 @@
           drawQuestIcon(game.elder, '?');
         }
 
+        // 再畫互動白框，讓它最清楚
         drawInteractionHints();
+
         drawDoorPrompt();
         drawPlayer();
         if (game.carrying) drawCarryIcon();
+
         ctx.restore();
       }
     }
@@ -1467,26 +1681,77 @@
       ctx.fillStyle = '#b88745';
       ctx.fillRect(z.x - 6, z.y - 4, z.w + 12, z.h + 8);
 
+      // 地面底色
       ctx.fillStyle = '#916231';
       ctx.fillRect(z.x, z.y, z.w, z.h);
       ctx.strokeStyle = '#5a381b';
       ctx.lineWidth = 3;
       ctx.strokeRect(z.x + 1, z.y + 1, z.w - 2, z.h - 2);
+
       const deposited = game.weeds.filter(w => w.cleared).length - (game.carrying ? 1 : 0);
       const pileHeight = Math.min(5, Math.ceil(Math.max(0, deposited) / 4));
-      for (let i = 0; i < pileHeight; i++) {
-        ctx.fillStyle = i % 2 ? '#7d5228' : '#8a5a2b';
-        ctx.fillRect(z.x + 10 + i * 2, z.y + z.h - 10 - i * 8, z.w - 20 - i * 4, 8);
+
+      // 還沒燒完前，顯示草木堆
+      if (!game.ashReady) {
+        for (let i = 0; i < pileHeight; i++) {
+          ctx.fillStyle = i % 2 ? '#7d5228' : '#8a5a2b';
+          ctx.fillRect(z.x + 10 + i * 2, z.y + z.h - 10 - i * 8, z.w - 20 - i * 4, 8);
+        }
       }
+
+      // 燃燒中：火從小變大
       if (game.burningTriggered) {
-        for (let i = 0; i < 5; i++) {
-          const fx = z.x + 18 + i * 18;
+        const fireLevel = game.burningProgress;
+        const flameCount = 2 + Math.floor(fireLevel * 4); // 2 → 6
+
+        for (let i = 0; i < flameCount; i++) {
+          const spacing = 16;
+          const fx = z.x + 20 + i * spacing;
           const baseY = z.y + z.h - 8 - (i % 2) * 3;
-          const up = 10 + Math.sin((performance.now() / 120) + i) * 5 + game.burningProgress * 8;
+
+          const up = 6 + fireLevel * 20 + Math.sin((performance.now() / 120) + i) * (2 + fireLevel * 4);
+          const innerUp = up * 0.58;
+
+          // 外焰
           ctx.fillStyle = '#ff8f2c';
-          ctx.beginPath(); ctx.moveTo(fx, baseY); ctx.lineTo(fx + 7, baseY - up); ctx.lineTo(fx + 14, baseY); ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(fx, baseY);
+          ctx.lineTo(fx + 7, baseY - up);
+          ctx.lineTo(fx + 14, baseY);
+          ctx.fill();
+
+          // 內焰
           ctx.fillStyle = '#ffd25a';
-          ctx.beginPath(); ctx.moveTo(fx + 3, baseY); ctx.lineTo(fx + 7, baseY - up * 0.6); ctx.lineTo(fx + 11, baseY); ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(fx + 3, baseY);
+          ctx.lineTo(fx + 7, baseY - innerUp);
+          ctx.lineTo(fx + 11, baseY);
+          ctx.fill();
+        }
+      }
+
+      // 燒完後：灰燼
+      if (game.ashReady) {
+        // 焦黑底
+        ctx.fillStyle = 'rgba(45, 35, 28, 0.72)';
+        ctx.fillRect(z.x + 8, z.y + z.h - 26, z.w - 16, 18);
+
+        // 灰燼堆
+        ctx.fillStyle = '#6e6a66';
+        ctx.fillRect(z.x + 14, z.y + z.h - 22, z.w - 28, 6);
+        ctx.fillRect(z.x + 20, z.y + z.h - 30, z.w - 40, 8);
+
+        ctx.fillStyle = '#8b8783';
+        ctx.fillRect(z.x + 24, z.y + z.h - 34, 12, 4);
+        ctx.fillRect(z.x + 42, z.y + z.h - 32, 10, 4);
+        ctx.fillRect(z.x + 62, z.y + z.h - 35, 14, 5);
+
+        // 零散灰燼
+        ctx.fillStyle = 'rgba(210, 205, 198, 0.55)';
+        for (let i = 0; i < 12; i++) {
+          const ax = z.x + 10 + i * 7;
+          const ay = z.y + z.h - 14 - (i % 3);
+          ctx.fillRect(ax, ay, 3, 2);
         }
       }
     }
@@ -1771,7 +2036,7 @@
         drawInteractOutline(game.stackZone);
       }
 
-      if (!game.inHouse && game.allCleared && !game.carrying && isNear(player, game.stackZone, 58) && !game.burningTriggered) {
+      if (!game.inHouse && game.allCleared && !game.carrying && isNear(player, game.stackZone, 58) && !game.burningTriggered && !game.ashReady) {
         drawInteractOutline(game.stackZone);
       }
 
