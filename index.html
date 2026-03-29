@@ -172,7 +172,7 @@
     <canvas id="game" width="1280" height="768"></canvas>
 
     <div class="panel" id="topbar">
-      <div class="badge" id="mission">任務：前往山田，與長老對話</div>
+      <div class="badge" id="mission">任務：前往田地，與長老對話</div>
       <div class="badge" id="status">場景：戶外｜祈福：未完成｜整理：0 / 0</div>
     </div>
 
@@ -216,7 +216,7 @@
           const n = prompt('請輸入角色名字：', game.playerName || '');
           if (n && n.trim()) game.playerName = n.trim();
           game.started = true;
-          setMessage(`歡迎，${game.playerName}。先熟悉部落，再前往山田。`);
+          setMessage(`歡迎，${game.playerName}。先熟悉部落，再前往田地。`);
           updateUI();
         }
       }
@@ -269,9 +269,26 @@
       isTalking: false
     };
 
+    const ELDER_SPOTS = {
+      prayer:     { x: 38.4 * TILE, y: 14.5 * TILE }, // 農田入口外側
+      brushGuide: { x: 50.6 * TILE, y: 18.2 * TILE }, // 右下堆置區旁
+      burnWatch:  { x: 44.0 * TILE, y: 8.8  * TILE }, // 上方防火道旁
+      stoneGuide: { x: 50.6 * TILE, y: 13.8 * TILE }, // 石牆右側
+      sowGuide:   { x: 40.6 * TILE, y: 18.6 * TILE }, // 左下田邊
+      birdGuide:  { x: 38.4 * TILE, y: 15.2 * TILE }, // 入口旁，方便看驅鳥
+      rest:       { x: 34.8 * TILE, y: 14.6 * TILE }  // 田外小路
+    };
+
+    function moveElderTo(stage) {
+      const pos = ELDER_SPOTS[stage];
+      if (!pos) return;
+      game.elder.x = pos.x;
+      game.elder.y = pos.y;
+    }
+
     function init() {
       game.player = { x: 7.2 * TILE, y: 19.2 * TILE, w: 20, h: 26, speed: 2.4, dir: 'down' };
-      game.elder = { x: 46.5 * TILE, y: 13.5 * TILE, w: 20, h: 26 };
+      game.elder = { x: ELDER_SPOTS.prayer.x, y: ELDER_SPOTS.prayer.y, w: 20, h: 26 };
       game.blocks = [];
       game.weeds = [];
       game.stackZone = { x: 47 * TILE, y: 19 * TILE, w: TILE * 3, h: TILE * 2 };
@@ -539,13 +556,21 @@
     function movePlayer() {
       const p = game.player;
       let dx = 0, dy = 0;
-      if (keys['ArrowLeft'] || keys['a']) { dx -= p.speed; p.dir = 'left'; }
-      if (keys['ArrowRight'] || keys['d']) { dx += p.speed; p.dir = 'right'; }
-      if (keys['ArrowUp'] || keys['w']) { dy -= p.speed; p.dir = 'up'; }
-      if (keys['ArrowDown'] || keys['s']) { dy += p.speed; p.dir = 'down'; }
+
+      if (keys['ArrowLeft'] || keys['a'])  { dx -= 1; p.dir = 'left'; }
+      if (keys['ArrowRight'] || keys['d']) { dx += 1; p.dir = 'right'; }
+      if (keys['ArrowUp'] || keys['w'])    { dy -= 1; p.dir = 'up'; }
+      if (keys['ArrowDown'] || keys['s'])  { dy += 1; p.dir = 'down'; }
+
+      if (dx !== 0 || dy !== 0) {
+        const len = Math.hypot(dx, dy);
+        dx = (dx / len) * p.speed;
+        dy = (dy / len) * p.speed;
+      }
 
       const nextX = { x: p.x + dx, y: p.y, w: p.w, h: p.h };
       if (!collides(nextX)) p.x += dx;
+
       const nextY = { x: p.x, y: p.y + dy, w: p.w, h: p.h };
       if (!collides(nextY)) p.y += dy;
     }
@@ -722,17 +747,40 @@
       }
 
       if (game.inHouse && isNear(player, game.interiorGuide, 50)) {
-        setDialogue('石板屋是生活與記憶的所在。先熟悉家屋，再去山田與外面的長老對話。', 'interiorGuide');
+        setDialogue('石板屋是生活與記憶的所在。先熟悉家屋，再去田外面和長老對話。', 'interiorGuide');
         return;
       }
 
       if (!game.blessingDone && isNear(player, game.elder, 56)) {
         game.blessingStep++;
-        if (game.blessingStep === 1) setDialogue('這片山田還不能動手。先向祖靈祈福，再開始整理吧。', 'elder');
+        if (game.blessingStep === 1) setDialogue('這塊田地還不能動手。先向祖靈祈福，再開始整理吧。', 'elder');
         else if (game.blessingStep === 2) setDialogue('你與長老低聲祈禱，向土地、山林與祖靈表達敬意。', 'elder');
         else {
           game.blessingDone = true;
-          setDialogue('祈福完成。現在可以整理荒田，把雜草與矮樹集中堆到右下角的堆置區。', 'elder');
+          moveElderTo('brushGuide');
+          setDialogue('祈福完成。現在可以整理這塊田地，把雜草和小樹集中堆到右下角。', 'elder');
+        }
+        updateUI();
+        return;
+      }
+
+      if (!game.inHouse && game.blessingDone && isNear(player, game.elder, 56)) {
+        if (!game.allCleared) {
+          setDialogue('先把田地整理好，把草木集中到右下角。', 'elder');
+        } else if (!game.burningTriggered) {
+          setDialogue('草木都堆好了，去堆置區準備點火。', 'elder');
+        } else if (!game.landReady) {
+          setDialogue('先等火勢退去，不要急著走進田裡。', 'elder');
+        } else if (!game.stoneWallBuilt) {
+          setDialogue('沿著田邊把石頭堆穩，先把擋土牆做好。', 'elder');
+        } else if (!game.allSeeded) {
+          setDialogue('石牆穩了，接下來把小米種子撒進土地裡。', 'elder');
+        } else if (!game.scareReady) {
+          setDialogue('先把田邊的驅鳥器具架好。', 'elder');
+        } else if (!game.birdPhaseDone) {
+          setDialogue('聽到鳥靠近，就去拉繩子把牠們驚走。', 'elder');
+        } else {
+          setDialogue('你今天把田地照顧得很好。', 'elder');
         }
         updateUI();
         return;
@@ -747,7 +795,7 @@
           if (weed.kind === 'wildflower') {
             setMessage('你在草叢裡發現一小束野花。你小心把它放到一旁，再把雜草帶去堆置區。');
           } else if (weed.kind === 'stone') {
-            setMessage('草叢下露出一塊特別的石片，像是舊山田留下的痕跡。你記住了這個地方，再把草木搬去堆置區。');
+            setMessage('草叢下露出一塊特別的石片，像是舊田地留下的痕跡。你記住了這個地方，再把草木搬去堆置區。');
           } else if (weed.kind === 'nest') {
             setMessage('你差點碰到一個小鳥巢，趕緊避開，把旁邊的雜草整理好後帶去堆置區。');
           } else {
@@ -766,16 +814,17 @@
         const totalNow = game.weeds.length;
 
         if (depositedNow === Math.ceil(totalNow / 3)) {
-          setMessage('你把第一批草木堆好，山田開始露出原本的輪廓。');
+          setMessage('你把第一批草木堆好，田地開始露出原本的輪廓。');
         } else if (depositedNow === Math.ceil(totalNow * 2 / 3)) {
-          setMessage('整理進度過半，山田看起來清爽多了。');
+          setMessage('整理進度過半，田地看起來清爽多了。');
         } else {
           setMessage('你把整理好的草木堆放在指定地點。');
         }
 
         if (game.weeds.every(w => w.cleared)) {
           game.allCleared = true;
-          setMessage('荒田已整理完成。再到堆置區按空白鍵，即可觸發燃燒。');
+          moveElderTo('burnWatch');
+          setDialogue('草木都集中好了。我先去上面看防火道，你到堆置區準備點火。', 'elder');
         }
 
         updateUI();
@@ -784,7 +833,7 @@
 
       if (!game.inHouse && game.allCleared && !game.carrying && isNear(player, game.stackZone, 58) && !game.burningTriggered) {
         game.burningTriggered = true;
-        setMessage('你點燃堆置的草木，火勢受控地燃起。山田燒墾進入下一步。');
+        setMessage('你點燃堆置的草木，火勢受控地燃起。長老正在上方看著火路。');
         updateUI();
       }
 
@@ -802,7 +851,8 @@
             game.stoneWallBuilt = true;
             game.landPrepared = true;
             game.landPlots.forEach(p => p.prepared = true);
-            setDialogue('石牆已經堆好，山田更穩固了。接下來可以開始播種。', 'elder');
+            moveElderTo('sowGuide');
+            setDialogue('石牆堆好了，田地穩了。接下來可以開始播種。', 'elder');
           }
 
           updateUI();
@@ -823,7 +873,8 @@
           } else {
             game.allSeeded = true;
             setupScareDevices();
-            setDialogue('播種完成。先在田邊架設驅鳥器具，再開始守護山田。', 'elder');
+            moveElderTo('birdGuide');
+            setDialogue('播種完成。先在田邊架好驅鳥器具，之後鳥來了就拉繩子。', 'elder');
           }
 
           updateUI();
@@ -843,7 +894,8 @@
             setMessage(`你架好了其中一組驅鳥器具。設置進度：${done} / ${total}`);
           } else {
             game.scareReady = true;
-            setDialogue('驅鳥器具已設置完成。鳥群來時，去拉動繩子發出聲響。', 'elder');
+            moveElderTo('rest');
+            setDialogue('驅鳥器具都好了。我在外頭看著，你聽到鳥靠近就去拉繩。', 'elder');
           }
 
           updateUI();
@@ -860,7 +912,7 @@
           const activeBirds = game.birds.filter(b => !b.scared);
 
           if (activeBirds.length === 0) {
-            setMessage('你拉了繩子，鋁罐發出聲響，但現在還沒有鳥靠近山田。');
+            setMessage('你拉了繩子，鋁罐發出聲響，但現在還沒有鳥靠近農田。');
             updateUI();
             return;
           }
@@ -876,7 +928,8 @@
           } else {
             game.birdPhaseDone = true;
             game.birds = [];
-            setDialogue('很好，你用驅鳥器具守住了山田。', 'elder');
+            moveElderTo('rest');
+            setDialogue('做得好，你把田地顧住了。今天先到這裡。', 'elder');
           }
 
           updateUI();
@@ -893,7 +946,8 @@
       if (game.burningProgress >= 1 && !game.landReady) {
         game.landReady = true;
         setupLandPlots();
-        setDialogue('火勢已經退去，地面覆上一層灰燼。接下來要開始整地，把土地整理平順，準備播種。', 'elder');
+        moveElderTo('stoneGuide');
+        setDialogue('火勢退去後，先整理田地，沿邊把石頭堆穩，顧住土。', 'elder');
         updateUI();
       }
     }
@@ -1005,7 +1059,7 @@
       if (game.inHouse) {
         missionEl.textContent = '任務：探索石板屋，靠近門口按空白鍵可離開';
       } else if (!game.blessingDone) {
-        missionEl.textContent = '任務：到山田與長老對話，完成祈福';
+        missionEl.textContent = '任務：到農田與長老對話，完成祈福';
       } else if (!game.allCleared) {
         missionEl.textContent = game.carrying ? '任務：把草木搬到右下角堆置區' : '任務：繼續整理荒田';
       } else if (!game.burningTriggered) {
@@ -1013,9 +1067,9 @@
       } else if (!game.landReady) {
         missionEl.textContent = '任務：等待火勢退去';
       } else if (!game.stoneWallBuilt) {
-        missionEl.textContent = '任務：堆疊石頭，完成山田擋土牆';
+        missionEl.textContent = '任務：堆疊石頭，完成田邊擋土牆';
       } else if (!game.allSeeded) {
-        missionEl.textContent = '任務：在山田播種小米';
+        missionEl.textContent = '任務：在農田播種小米';
       } else if (!game.scareReady) {
         missionEl.textContent = '任務：在田邊架設驅鳥器具';
       } else if (!game.birdPhaseDone) {
@@ -1079,7 +1133,11 @@
         drawWeeds();
         drawStackZone();
         drawNPC(game.elder, '#1a1a1a', '#d0b98c');
-        drawQuestIcon(game.elder, !game.blessingDone ? '!' : '?');
+        if (!game.blessingDone) {
+          drawQuestIcon(game.elder, '!');
+        } else if (game.birdPhaseDone) {
+          drawQuestIcon(game.elder, '?');
+        }
         drawDoorPrompt();
         drawPlayer();
         if (game.carrying) drawCarryIcon();
