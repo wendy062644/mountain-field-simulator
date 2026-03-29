@@ -1133,11 +1133,14 @@
         drawWeeds();
         drawStackZone();
         drawNPC(game.elder, '#1a1a1a', '#d0b98c');
+
         if (!game.blessingDone) {
           drawQuestIcon(game.elder, '!');
         } else if (game.birdPhaseDone) {
           drawQuestIcon(game.elder, '?');
         }
+
+        drawInteractionHints();
         drawDoorPrompt();
         drawPlayer();
         if (game.carrying) drawCarryIcon();
@@ -1690,6 +1693,122 @@
       ctx.strokeStyle = symbol === '!' ? '#7a4a16' : '#2b4f7a';
       ctx.lineWidth = 2;
       ctx.stroke();
+    }
+
+    function drawInteractOutline(box, radius = 6) {
+      const pad = 6;
+      const x = box.x - pad;
+      const y = box.y - pad;
+      const w = box.w + pad * 2;
+      const h = box.h + pad * 2;
+
+      ctx.save();
+
+      // 外層淡白光
+      ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+      ctx.lineWidth = 8;
+      roundRect(ctx, x, y, w, h, radius);
+      ctx.stroke();
+
+      // 內層亮白框
+      ctx.strokeStyle = 'rgba(255,245,210,0.95)';
+      ctx.lineWidth = 2;
+      roundRect(ctx, x, y, w, h, radius);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    function drawInteractionHints() {
+      const player = game.player;
+
+      // 石板屋門口
+      if (!game.inHouse && isNear(player, game.houseDoorZone, 44)) {
+        drawInteractOutline(game.houseDoorZone);
+      }
+
+      // 屋內出口
+      if (game.inHouse && isNear(player, game.houseExitZone, 46)) {
+        drawInteractOutline(game.houseExitZone);
+      }
+
+      // 屋內長者
+      if (game.inHouse && isNear(player, game.interiorGuide, 50)) {
+        drawInteractOutline(game.interiorGuide);
+      }
+
+      // 戶外長老
+      if (!game.inHouse && isNear(player, game.elder, 56)) {
+        drawInteractOutline(game.elder);
+      }
+
+      // 雜草 / 小樹
+      if (!game.inHouse && game.blessingDone && !game.carrying) {
+        const weed = game.weeds.find(
+          w => !w.cleared && isNear(player, { x: w.x, y: w.y, w: w.w, h: w.h }, 34)
+        );
+        if (weed) {
+          drawInteractOutline({ x: weed.x, y: weed.y, w: weed.w, h: weed.h });
+        }
+      }
+
+      // 堆置區
+      if (!game.inHouse && game.carrying && isNear(player, game.stackZone, 58)) {
+        drawInteractOutline(game.stackZone);
+      }
+
+      if (!game.inHouse && game.allCleared && !game.carrying && isNear(player, game.stackZone, 58) && !game.burningTriggered) {
+        drawInteractOutline(game.stackZone);
+      }
+
+      // 石頭堆
+      if (!game.inHouse && game.landReady && !game.stoneWallBuilt) {
+        const stack = game.stoneStacks.find(s => !s.done && isNear(player, s, 44));
+        if (stack) {
+          drawInteractOutline(stack);
+        }
+      }
+
+      // 播種區塊
+      if (!game.inHouse && game.landPrepared && !game.allSeeded) {
+        const plot = game.landPlots.find(p => p.prepared && !p.seeded && isNear(player, p, 44));
+        if (plot) {
+          drawInteractOutline(plot);
+        }
+      }
+
+      // 驅鳥器具本體
+      if (!game.inHouse && game.allSeeded && !game.scareReady) {
+        const device = game.scareDevices.find(d => !d.placed && isNear(player, d, 42));
+        if (device) {
+          drawInteractOutline(device);
+        }
+      }
+
+      // 拉繩點
+      if (!game.inHouse && game.scareReady && !game.birdPhaseDone) {
+        const rope = game.scareDevices.find(
+          d => d.placed && isNear(player, { x: d.ropeX, y: d.ropeY, w: 18, h: 18 }, 42)
+        );
+
+        if (rope) {
+          drawInteractOutline({ x: rope.ropeX, y: rope.ropeY, w: 18, h: 18 }, 4);
+        }
+      }
     }
 
     function drawPlayerName() {
