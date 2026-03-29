@@ -257,6 +257,20 @@
       scareCount: 0,
       birdPhaseDone: false,
 
+      growthStarted: false,
+      growthProgress: 0,
+      growthStage: 0,      // 0剛播、1發芽、2長高、3成熟
+      allMature: false,
+
+      harvestCount: 0,
+      harvestTarget: 0,
+      carryingHarvest: false,
+      allHarvested: false,
+
+      storageZone: null,
+      storedBundles: 0,
+      allStored: false,
+
       houseDoorZone: null,
       houseExitZone: null,
       interiorGuide: null,
@@ -277,7 +291,8 @@
       stoneGuide: { x: 52.6 * TILE, y: 13.8 * TILE }, // 石牆右側
       sowGuide:   { x: 40.6 * TILE, y: 18.6 * TILE }, // 左下田邊
       birdGuide:  { x: 38.4 * TILE, y: 15.2 * TILE }, // 入口旁，方便看驅鳥
-      rest:       { x: 34.8 * TILE, y: 14.6 * TILE }  // 田外小路
+      rest:       { x: 34.8 * TILE, y: 14.6 * TILE }, // 田外小路
+      storageGuide:{ x: 12.8 * TILE, y: 16.8 * TILE } // 石板屋旁穀倉附近
     };
 
     function moveElderTo(stage) {
@@ -317,6 +332,19 @@
       game.birdTimer = 0;
       game.scareCount = 0;
       game.birdPhaseDone = false;
+      game.growthStarted = false;
+      game.growthProgress = 0;
+      game.growthStage = 0;
+      game.allMature = false;
+
+      game.harvestCount = 0;
+      game.harvestTarget = 0;
+      game.carryingHarvest = false;
+      game.allHarvested = false;
+
+      game.storageZone = { x: 11.8 * TILE, y: 15.2 * TILE, w: 2.2 * TILE, h: 2.2 * TILE };
+      game.storedBundles = 0;
+      game.allStored = false;
       game.camera = { x: 0, y: 0 };
       game.started = false;
       game.message = '';
@@ -411,10 +439,10 @@
 
     function setupLandPlots() {
       game.landPlots = [
-        { x: 41.2 * TILE, y: 10.8 * TILE, w: 2.6 * TILE, h: 2.2 * TILE, prepared: false, seeded: false },
-        { x: 46.0 * TILE, y: 10.8 * TILE, w: 2.8 * TILE, h: 2.2 * TILE, prepared: false, seeded: false },
-        { x: 41.6 * TILE, y: 15.0 * TILE, w: 2.7 * TILE, h: 2.3 * TILE, prepared: false, seeded: false },
-        { x: 46.1 * TILE, y: 15.1 * TILE, w: 2.8 * TILE, h: 2.3 * TILE, prepared: false, seeded: false }
+        { x: 41.2 * TILE, y: 10.8 * TILE, w: 2.6 * TILE, h: 2.2 * TILE, prepared: false, seeded: false, growth: 0, mature: false, harvested: false },
+        { x: 46.0 * TILE, y: 10.8 * TILE, w: 2.8 * TILE, h: 2.2 * TILE, prepared: false, seeded: false, growth: 0, mature: false, harvested: false },
+        { x: 41.6 * TILE, y: 15.0 * TILE, w: 2.7 * TILE, h: 2.3 * TILE, prepared: false, seeded: false, growth: 0, mature: false, harvested: false },
+        { x: 46.1 * TILE, y: 15.1 * TILE, w: 2.8 * TILE, h: 2.3 * TILE, prepared: false, seeded: false, growth: 0, mature: false, harvested: false }
       ];
 
       game.stoneStacks = [
@@ -781,8 +809,14 @@
           setDialogue('先把田邊的驅鳥器具架好。', 'elder');
         } else if (!game.birdPhaseDone) {
           setDialogue('聽到鳥靠近，就去拉繩子把牠們驚走。', 'elder');
+        } else if (!game.allMature) {
+          setDialogue('田裡的小米還在長，先讓它慢慢成熟。', 'elder');
+        } else if (!game.allHarvested) {
+          setDialogue('穗已經熟了，去田裡採收小米吧。', 'elder');
+        } else if (!game.allStored) {
+          setDialogue('把採下來的小米背回穀倉，曬過、收好，才算真正完成。', 'elder');
         } else {
-          setDialogue('你今天把田地照顧得很好。', 'elder');
+          setDialogue('今年的小米已經採收入倉，可以準備迎接收穫之後的分享與祭儀了。', 'elder');
         }
         updateUI();
         return;
@@ -937,6 +971,89 @@
           updateUI();
           return;
         }
+      }
+
+      if (!game.inHouse && game.allMature && !game.carryingHarvest) {
+        const plot = game.landPlots.find(
+          p => p.mature && !p.harvested && isNear(player, p, 44)
+        );
+
+        if (plot) {
+          plot.harvested = true;
+          plot.mature = false;
+          game.carryingHarvest = true;
+          game.harvestCount++;
+
+          if (game.harvestCount < game.harvestTarget) {
+            setMessage(`你割下一束成熟的小米穗。先背回穀倉，再回來繼續採收。`);
+          } else {
+            game.allHarvested = true;
+            setMessage('最後一束小米也採下了。把這一批背回穀倉吧。');
+          }
+
+          updateUI();
+          return;
+        }
+      }
+
+      if (!game.inHouse && game.carryingHarvest && isNear(player, game.storageZone, 54)) {
+        game.carryingHarvest = false;
+        game.storedBundles++;
+
+        if (game.storedBundles < game.harvestTarget) {
+          setMessage(`你把一束小米放進穀倉。入倉進度：${game.storedBundles} / ${game.harvestTarget}`);
+        } else {
+          game.allStored = true;
+          moveElderTo('storageGuide');
+          setDialogue('小米都已經入倉了。今年的田地總算有了收成。', 'elder');
+        }
+
+        updateUI();
+        return;
+      }
+    }
+
+    function updateCropGrowth() {
+      if (!game.birdPhaseDone || game.allMature) return;
+
+      if (!game.growthStarted) {
+        game.growthStarted = true;
+        game.growthProgress = 0;
+        game.growthStage = 0;
+        moveElderTo('rest');
+        setDialogue('鳥群退去後，就等小米慢慢長成。這段時間要常來看田。', 'elder');
+        updateUI();
+        return;
+      }
+
+      game.growthProgress = Math.min(1, game.growthProgress + 0.0007);
+
+      let stage = 0;
+      if (game.growthProgress >= 0.25) stage = 1;
+      if (game.growthProgress >= 0.55) stage = 2;
+      if (game.growthProgress >= 0.9)  stage = 3;
+
+      if (stage !== game.growthStage) {
+        game.growthStage = stage;
+        game.landPlots.forEach(p => {
+          if (p.seeded && !p.harvested) p.growth = stage;
+        });
+
+        if (stage === 1) {
+          setMessage('田裡冒出了小米幼苗。');
+        } else if (stage === 2) {
+          setMessage('小米慢慢長高了，田地開始變得茂密。');
+        } else if (stage === 3) {
+          game.allMature = true;
+          game.landPlots.forEach(p => {
+            if (p.seeded && !p.harvested) p.mature = true;
+          });
+          game.harvestTarget = game.landPlots.filter(p => p.mature).length;
+          moveElderTo('storageGuide');
+          setDialogue('小米穗已經轉黃下垂，可以開始採收。採下來後背回穀倉。', 'elder');
+        }
+
+        updateUI();
       }
     }
 
@@ -1153,6 +1270,29 @@
           }
         }
       }
+
+      if (!game.allMature) {
+        for (const p of game.landPlots) {
+          if (p.seeded && !p.harvested) {
+            drawTaskGlow(p, 'rgba(210, 255, 190, 0.12)', 8);
+          }
+        }
+        return;
+      }
+
+      if (!game.allHarvested) {
+        for (const p of game.landPlots) {
+          if (p.mature && !p.harvested) {
+            drawTaskGlow(p, 'rgba(255, 235, 160, 0.18)', 8);
+          }
+        }
+        return;
+      }
+
+      if (!game.allStored) {
+        drawTaskGlow(game.storageZone, 'rgba(235, 245, 255, 0.20)', 12);
+        return;
+      }
     }
 
     function roundRect(ctx, x, y, w, h, r) {
@@ -1256,6 +1396,17 @@
           drawInteractOutline({ x: rope.ropeX, y: rope.ropeY, w: 18, h: 18 }, 4);
         }
       }
+
+      if (!game.inHouse && game.allMature && !game.carryingHarvest) {
+        const plot = game.landPlots.find(p => p.mature && !p.harvested && isNear(player, p, 44));
+        if (plot) {
+          drawInteractOutline(plot);
+        }
+      }
+
+      if (!game.inHouse && game.carryingHarvest && isNear(player, game.storageZone, 54)) {
+        drawInteractOutline(game.storageZone);
+      }
     }
 
     function updateUI() {
@@ -1280,8 +1431,14 @@
         missionEl.textContent = '任務：在田邊架設驅鳥器具';
       } else if (!game.birdPhaseDone) {
         missionEl.textContent = `任務：拉動繩索驅鳥（${game.scareCount} / 5）`;
+      } else if (!game.allMature) {
+        missionEl.textContent = '任務：等待小米長大成熟';
+      } else if (!game.allHarvested) {
+        missionEl.textContent = `任務：採收成熟小米（${game.harvestCount} / ${game.harvestTarget}）`;
+      } else if (!game.allStored) {
+        missionEl.textContent = `任務：把小米送入穀倉（${game.storedBundles} / ${game.harvestTarget}）`;
       } else {
-        missionEl.textContent = '任務完成：你完成了播種與驅鳥';
+        missionEl.textContent = '任務完成：你完成了生長、採收與入倉';
       }
 
       const preparedCount = game.landPlots.filter(p => p.prepared).length;
@@ -1296,7 +1453,11 @@
         `${game.landReady && !game.stoneWallBuilt ? `｜石牆：${game.stoneStacks.filter(s => s.done).length} / ${game.stoneStacks.length}` : ''}` +
         `${game.landPrepared ? `｜播種：${seededCount} / ${seededTotal}` : ''}` +
         `${game.allSeeded && !game.scareReady ? `｜器具：${game.scareDevices.filter(d => d.placed).length} / ${game.scareDevices.length}` : ''}` +
-        `${game.scareReady && !game.birdPhaseDone ? `｜驅鳥：${game.scareCount} / 5` : ''}`;
+        `${game.scareReady && !game.birdPhaseDone ? `｜驅鳥：${game.scareCount} / 5` : ''}` +
+        `${game.birdPhaseDone && !game.allMature ? `｜生長階段：${game.growthStage} / 3` : ''}` +
+        `${game.allMature ? `｜採收：${game.harvestCount} / ${game.harvestTarget}` : ''}` +
+        `${game.storedBundles > 0 && !game.allStored ? `｜入倉：${game.storedBundles} / ${game.harvestTarget}` : ''}` +
+        `${game.carryingHarvest ? '｜背負小米中' : ''}`;
       refreshDialogueUI();
     }
 
@@ -1306,6 +1467,7 @@
         handleInteract();
         updateBurning();
         updateBirds();
+        updateCropGrowth();
         updateCamera();
       }
       render();
@@ -1332,6 +1494,7 @@
         drawGround();
         drawRoad();
         drawHouseArea();
+        drawGranary();
         drawField();
         drawLandPlots();
         drawScareDevices();
@@ -1500,6 +1663,50 @@
               const py = plot.y + ry * gapY;
               ctx.fillRect(px, py, 2, 2);
             }
+          }
+        }
+
+        // 生長中的小米
+        if (plot.seeded && plot.growth >= 1 && !plot.harvested) {
+          const cols = 5;
+          const rows = 4;
+          const gapX = plot.w / (cols + 1);
+          const gapY = plot.h / (rows + 1);
+
+          for (let ry = 1; ry <= rows; ry++) {
+            for (let cx = 1; cx <= cols; cx++) {
+              const px = plot.x + cx * gapX;
+              const py = plot.y + ry * gapY;
+
+              // 莖
+              ctx.strokeStyle = plot.growth >= 3 ? '#9f7d2f' : '#5c9a3b';
+              ctx.lineWidth = plot.growth >= 2 ? 2 : 1.5;
+              ctx.beginPath();
+              ctx.moveTo(px, py + 6);
+              ctx.lineTo(px, py - (plot.growth === 1 ? 4 : plot.growth === 2 ? 9 : 12));
+              ctx.stroke();
+
+              // 穗
+              if (plot.growth >= 2) {
+                ctx.fillStyle = plot.growth >= 3 ? '#d8b44b' : '#7dbd53';
+                ctx.fillRect(px - 2, py - (plot.growth === 2 ? 11 : 14), 4, plot.growth === 2 ? 5 : 7);
+              }
+            }
+          }
+        }
+
+        // 採收後殘梗
+        if (plot.harvested) {
+          ctx.strokeStyle = '#8a6a3d';
+          ctx.lineWidth = 1.5;
+
+          for (let i = 0; i < 10; i++) {
+            const px = plot.x + 10 + i * ((plot.w - 20) / 9);
+            const py = plot.y + plot.h - 8;
+            ctx.beginPath();
+            ctx.moveTo(px, py);
+            ctx.lineTo(px, py - 6);
+            ctx.stroke();
           }
         }
       }
@@ -1752,6 +1959,42 @@
           const ax = z.x + 10 + i * 7;
           const ay = z.y + z.h - 14 - (i % 3);
           ctx.fillRect(ax, ay, 3, 2);
+        }
+      }
+    }
+
+    function drawGranary() {
+      const z = game.storageZone;
+      const x = z.x - 8;
+      const y = z.y - 30;
+
+      // 支柱
+      ctx.fillStyle = '#5c4021';
+      ctx.fillRect(x + 6, y + 26, 6, 26);
+      ctx.fillRect(x + 42, y + 26, 6, 26);
+
+      // 倉體
+      ctx.fillStyle = '#7b5a34';
+      ctx.fillRect(x, y + 8, 54, 24);
+
+      // 屋頂
+      ctx.fillStyle = '#4a3a2a';
+      ctx.beginPath();
+      ctx.moveTo(x - 4, y + 10);
+      ctx.lineTo(x + 20, y - 6);
+      ctx.lineTo(x + 58, y + 10);
+      ctx.closePath();
+      ctx.fill();
+
+      // 倉門
+      ctx.fillStyle = '#e7d7a4';
+      ctx.fillRect(x + 20, y + 15, 12, 10);
+
+      // 已入倉束數
+      if (game.storedBundles > 0) {
+        ctx.fillStyle = '#d4b14c';
+        for (let i = 0; i < Math.min(game.storedBundles, 4); i++) {
+          ctx.fillRect(x + 6 + i * 10, y + 12, 6, 10);
         }
       }
     }
