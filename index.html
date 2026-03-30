@@ -292,7 +292,7 @@
       sowGuide:   { x: 40.6 * TILE, y: 18.6 * TILE }, // 左下田邊
       birdGuide:  { x: 38.4 * TILE, y: 15.2 * TILE }, // 入口旁，方便看驅鳥
       rest:       { x: 34.8 * TILE, y: 14.6 * TILE }, // 田外小路
-      storageGuide:{ x: 12.8 * TILE, y: 16.8 * TILE } // 石板屋旁穀倉附近
+      storageGuide:{ x: 14.8 * TILE, y: 16.8 * TILE } // 石板屋旁穀倉附近
     };
 
     function moveElderTo(stage) {
@@ -797,7 +797,7 @@
       if (!game.inHouse && game.blessingDone && isNear(player, game.elder, 56)) {
         if (!game.allCleared) {
           setDialogue('先把田地整理好，把草木集中到右下角。', 'elder');
-        } else if (!game.burningTriggered) {
+        } else if (!game.burningTriggered && !game.ashReady && !game.landReady) {
           setDialogue('草木都堆好了，去堆置區準備點火。', 'elder');
         } else if (!game.landReady) {
           setDialogue('先等火勢退去，不要急著走進田裡。', 'elder');
@@ -1414,12 +1414,12 @@
       const deposited = game.weeds.filter(w => w.cleared).length - (game.carrying ? 1 : 0);
 
       if (game.inHouse) {
-        missionEl.textContent = '任務：探索石板屋，靠近門口按空白鍵可離開';
+        missionEl.textContent = '探索石板屋，靠近門口按空白鍵可離開';
       } else if (!game.blessingDone) {
         missionEl.textContent = '任務：到農田與長老對話，完成祈福';
       } else if (!game.allCleared) {
         missionEl.textContent = game.carrying ? '任務：把草木搬到右下角堆置區' : '任務：繼續整理荒田';
-      } else if (!game.burningTriggered) {
+      } else if (!game.burningTriggered && !game.ashReady && !game.landReady) {
         missionEl.textContent = '任務：前往堆置區，觸發燃燒';
       } else if (!game.landReady) {
         missionEl.textContent = '任務：等待火勢退去';
@@ -1446,18 +1446,40 @@
       const seededCount = game.landPlots.filter(p => p.seeded).length;
       const seededTotal = game.landPlots.length;
 
-      statusEl.textContent =
-        `場景：${game.inHouse ? '石板屋內' : '戶外'}｜祈福：${game.blessingDone ? '已完成' : '未完成'}｜整理：${Math.max(deposited, 0)} / ${total}` +
-        `${game.carrying ? '｜搬運中' : ''}` +
-        `${game.burningTriggered ? '｜燃燒中' : ''}` +
-        `${game.landReady && !game.stoneWallBuilt ? `｜石牆：${game.stoneStacks.filter(s => s.done).length} / ${game.stoneStacks.length}` : ''}` +
-        `${game.landPrepared ? `｜播種：${seededCount} / ${seededTotal}` : ''}` +
-        `${game.allSeeded && !game.scareReady ? `｜器具：${game.scareDevices.filter(d => d.placed).length} / ${game.scareDevices.length}` : ''}` +
-        `${game.scareReady && !game.birdPhaseDone ? `｜驅鳥：${game.scareCount} / 5` : ''}` +
-        `${game.birdPhaseDone && !game.allMature ? `｜生長階段：${game.growthStage} / 3` : ''}` +
-        `${game.allMature ? `｜採收：${game.harvestCount} / ${game.harvestTarget}` : ''}` +
-        `${game.storedBundles > 0 && !game.allStored ? `｜入倉：${game.storedBundles} / ${game.harvestTarget}` : ''}` +
-        `${game.carryingHarvest ? '｜背負小米中' : ''}`;
+      let statusText = `場景：${game.inHouse ? '石板屋內' : '戶外'}`;
+
+      if (game.inHouse) {
+        statusText += '｜探索中';
+      } else if (!game.blessingDone) {
+        statusText += `｜祈福：${Math.min(game.blessingStep, 3)} / 3`;
+      } else if (!game.allCleared) {
+        statusText += `｜整理：${Math.max(deposited, 0)} / ${total}`;
+        if (game.carrying) statusText += '｜搬運中';
+      } else if (!game.burningTriggered && !game.ashReady && !game.landReady) {
+        statusText += '｜前往堆置區點火';
+      } else if (!game.landReady) {
+        statusText += '｜燃燒中';
+      } else if (!game.stoneWallBuilt) {
+        statusText += `｜石牆：${game.stoneStacks.filter(s => s.done).length} / ${game.stoneStacks.length}`;
+      } else if (!game.allSeeded) {
+        statusText += `｜播種：${seededCount} / ${seededTotal}`;
+      } else if (!game.scareReady) {
+        statusText += `｜器具：${game.scareDevices.filter(d => d.placed).length} / ${game.scareDevices.length}`;
+      } else if (!game.birdPhaseDone) {
+        statusText += `｜驅鳥：${game.scareCount} / 5`;
+      } else if (!game.allMature) {
+        statusText += `｜生長：${game.growthStage} / 3`;
+      } else if (!game.allHarvested) {
+        statusText += `｜採收：${game.harvestCount} / ${game.harvestTarget}`;
+        if (game.carryingHarvest) statusText += '｜搬運中';
+      } else if (!game.allStored) {
+        statusText += `｜入倉：${game.storedBundles} / ${game.harvestTarget}`;
+        if (game.carryingHarvest) statusText += '｜搬運中';
+      } else {
+        statusText += '｜全部完成';
+      }
+
+      statusEl.textContent = statusText;
       refreshDialogueUI();
     }
 
@@ -1486,6 +1508,7 @@
         drawInteriorScene();
         drawNPC(game.interiorGuide, '#5a3420', '#d0b98c');
         drawHouseExitMarker();
+        drawInteractionHints();
         drawPlayer();
       } else {
         ctx.save();
