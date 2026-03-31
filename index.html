@@ -198,6 +198,15 @@
     const missionEl = document.getElementById('mission');
     const statusEl = document.getElementById('status');
 
+    const maleSong = new Audio('A.mp3');
+    const femaleSong = new Audio('B.mp3');
+
+    maleSong.loop = true;
+    femaleSong.loop = true;
+
+    maleSong.volume = 0.7;
+    femaleSong.volume = 0.7;
+
     const TILE = 32;
     const WORLD = { w: 56, h: 30 };
     const keys = {};
@@ -273,7 +282,8 @@
 
       houseDoorZone: null,
       houseExitZone: null,
-      interiorGuide: null,
+      interiorNPCs: [],
+      currentIndoorSinger: null,
       camera: { x: 0, y: 0 },
       started: false,
       selectedGender: 'male',
@@ -310,7 +320,33 @@
       game.stackZone = { x: 47 * TILE, y: 19 * TILE, w: TILE * 3, h: TILE * 2 };
       game.houseDoorZone = { x: 8.15 * TILE, y: 16 * TILE, w: 1.55 * TILE, h: 2.9 * TILE };
       game.houseExitZone = { x: 14.2 * TILE, y: 14.3 * TILE, w: 1.6 * TILE, h: 1.2 * TILE };
-      game.interiorGuide = { x: 20.5 * TILE, y: 8.5 * TILE, w: 20, h: 26 };
+      game.interiorNPCs = [
+        {
+          id: 'indoorMale',
+          name: '屋內男族人',
+          gender: 'male',
+          x: 16.8 * TILE,
+          y: 9.6 * TILE,
+          w: 20,
+          h: 26,
+          songText: '嗯——啊——山谷的風，會把歌帶到田裡。',
+          songFreqs: [196, 246.94, 293.66]
+        },
+        {
+          id: 'indoorFemale',
+          name: '屋內女族人',
+          gender: 'female',
+          x: 22.8 * TILE,
+          y: 9.4 * TILE,
+          w: 20,
+          h: 26,
+          songText: '啦——啊——小米成熟時，歌聲也會回來。',
+          songFreqs: [261.63, 329.63, 392.0]
+        }
+      ];
+
+      game.currentIndoorAudio = null;
+      stopIndoorSong();
       game.blessingDone = false;
       game.blessingStep = 0;
       game.carrying = false;
@@ -547,8 +583,10 @@
         if (hitRoomEdge) return true;
 
         // 室內 NPC 防撞
-        const guideHitbox = getNPCCollider(game.interiorGuide);
-        if (rectsOverlap(box, guideHitbox)) return true;
+        for (const npc of game.interiorNPCs) {
+          const hitbox = getNPCCollider(npc);
+          if (rectsOverlap(box, hitbox)) return true;
+        }
 
         return false;
       }
@@ -630,7 +668,8 @@
       const titleMap = {
         system: '魯凱族山田燒墾',
         elder: '長老',
-        interiorGuide: '屋內長者',
+        indoorMale: '屋內男族人',
+        indoorFemale: '屋內女族人',
         player: game.playerName || '你'
       };
 
@@ -644,7 +683,10 @@
 
       const ctx = portraitCtx;
       const isElder = speaker === 'elder';
-      const clothes = isElder ? '#1a1a1a' : '#5a3420';
+      const isIndoorMale = speaker === 'indoorMale';
+      const isIndoorFemale = speaker === 'indoorFemale';
+
+      const clothes = isElder ? '#1a1a1a' : isIndoorMale ? '#3f2a1d' : '#7b2948';
       const skin = '#d0b98c';
 
       // 背景光暈
@@ -729,7 +771,11 @@
       const showPortrait =
         shouldShow &&
         game.isTalking &&
-        (game.currentSpeaker === 'elder' || game.currentSpeaker === 'interiorGuide');
+        (
+          game.currentSpeaker === 'elder' ||
+          game.currentSpeaker === 'indoorMale' ||
+          game.currentSpeaker === 'indoorFemale'
+        );
 
       dialogueEl.classList.toggle('show-portrait', showPortrait);
       drawDialoguePortrait(showPortrait ? game.currentSpeaker : null);
@@ -742,11 +788,37 @@
     }
 
     function setMessage(text, title = '魯凱族山田燒墾') {
+      stopIndoorSong();
       game.message = text;
       game.currentSpeaker = 'system';
       game.currentTitle = title;
       game.isTalking = false;
       refreshDialogueUI();
+    }
+
+    function stopIndoorSong() {
+      maleSong.pause();
+      femaleSong.pause();
+
+      maleSong.currentTime = 0;
+      femaleSong.currentTime = 0;
+
+      game.currentIndoorAudio = null;
+    }
+
+    function playIndoorSong(type) {
+      stopIndoorSong();
+
+      let target = null;
+      if (type === 'male') target = maleSong;
+      if (type === 'female') target = femaleSong;
+      if (!target) return;
+
+      target.play().catch(err => {
+        console.warn('音樂播放失敗：', err);
+      });
+
+      game.currentIndoorAudio = target;
     }
 
     function handleInteract() {
@@ -776,9 +848,18 @@
         return;
       }
 
-      if (game.inHouse && isNear(player, game.interiorGuide, 50)) {
-        setDialogue('石板屋是生活與記憶的所在。先熟悉家屋，再去田外面和長老對話。', 'interiorGuide');
-        return;
+      if (game.inHouse) {
+        const indoorNpc = game.interiorNPCs.find(npc => isNear(player, npc, 50));
+        if (indoorNpc) {
+          if (indoorNpc.id === 'indoorMale') {
+            setDialogue(indoorNpc.songText, 'indoorMale');
+            playIndoorSong('male');
+          } else {
+            setDialogue(indoorNpc.songText, 'indoorFemale');
+            playIndoorSong('female');
+          }
+          return;
+        }
       }
 
       if (!game.blessingDone && isNear(player, game.elder, 56)) {
@@ -1342,8 +1423,12 @@
         drawInteractOutline(game.houseExitZone);
       }
 
-      if (game.inHouse && isNear(player, game.interiorGuide, 50)) {
-        drawInteractOutline(game.interiorGuide);
+      if (game.inHouse) {
+        for (const npc of game.interiorNPCs) {
+          if (isNear(player, npc, 50)) {
+            drawInteractOutline(npc);
+          }
+        }
       }
 
       if (!game.inHouse && isNear(player, game.elder, 56)) {
@@ -1486,6 +1571,19 @@
     function loop() {
       if (game.started) {
         movePlayer();
+        if (game.inHouse && game.currentIndoorAudio) {
+          let activeNpc = null;
+
+          if (game.currentSpeaker === 'indoorMale') {
+            activeNpc = game.interiorNPCs.find(n => n.id === 'indoorMale');
+          } else if (game.currentSpeaker === 'indoorFemale') {
+            activeNpc = game.interiorNPCs.find(n => n.id === 'indoorFemale');
+          }
+
+          if (!activeNpc || !isNear(game.player, activeNpc, 72)) {
+            setMessage('歌聲慢慢停了下來。');
+          }
+        }
         handleInteract();
         updateBurning();
         updateBirds();
@@ -1506,7 +1604,15 @@
 
       if (game.inHouse) {
         drawInteriorScene();
-        drawNPC(game.interiorGuide, '#5a3420', '#d0b98c');
+
+        for (const npc of game.interiorNPCs) {
+          if (npc.gender === 'male') {
+            drawNPC(npc, '#3f2a1d', '#d0b98c');
+          } else {
+            drawNPC(npc, '#7b2948', '#d0b98c');
+          }
+        }
+
         drawHouseExitMarker();
         drawInteractionHints();
         drawPlayer();
@@ -2278,8 +2384,12 @@
       }
 
       // 屋內長者
-      if (game.inHouse && isNear(player, game.interiorGuide, 50)) {
-        drawInteractOutline(game.interiorGuide);
+      if (game.inHouse) {
+        for (const npc of game.interiorNPCs) {
+          if (isNear(player, npc, 50)) {
+            drawInteractOutline(npc);
+          }
+        }
       }
 
       // 戶外長老
