@@ -325,12 +325,22 @@
       game.houseExitZone = { x: 14.2 * TILE, y: 14.3 * TILE, w: 1.6 * TILE, h: 1.2 * TILE };
       game.storageZone = { x: 21.8 * TILE, y: 18.0 * TILE, w: 3.4 * TILE, h: 3.0 * TILE };
       const g = getGranaryGeometry();
+
       game.granaryDoorZone = {
         x: g.door.x - 4,
         y: g.door.y - 4,
         w: g.door.w + 8,
         h: g.door.h + 8
       };
+
+      // 白框提示區：比真正門口大，而且往下延伸到玩家會站的位置
+      game.granaryHintZone = {
+        x: g.door.x - 20,
+        y: g.door.y - 10,
+        w: g.door.w + 40,
+        h: g.door.h + 60
+      };
+
       game.granaryExitZone = { x: 580, y: 470, w: 90, h: 78 };
       game.inGranary = false;
       game.interiorNPCs = [
@@ -860,7 +870,7 @@
         return;
       }
 
-      if (!game.inHouse && !game.inGranary && isNear(player, game.granaryDoorZone, 48)) {
+      if (!game.inHouse && !game.inGranary && isNear(player, game.granaryDoorZone, 58)) {
         game.inGranary = true;
         game.player.x = 19.2 * TILE;
         game.player.y = 16.8 * TILE;
@@ -1463,10 +1473,6 @@
         drawInteractOutline(game.houseDoorZone);
       }
 
-      if (!game.inHouse && !game.inGranary && isNear(player, game.granaryDoorZone, 48)) {
-        drawInteractOutline(game.granaryDoorZone);
-      }
-
       if (game.inGranary && isNear(player, game.granaryExitZone, 46)) {
         drawInteractOutline(game.granaryExitZone);
       }
@@ -1798,8 +1804,9 @@
 
       } else if (game.inGranary) {
         drawGranaryInteriorScene();
-        drawGranaryExitMarker();
-        drawInteractionHints();
+        if (isNear(game.player, game.granaryExitZone, 46)) {
+          drawInteractOutline(game.granaryExitZone);
+        }
         drawPlayer();
 
       } else {
@@ -2705,10 +2712,18 @@
     function drawGranaryDoorPrompt() {
       if (game.inHouse || game.inGranary) return;
 
-      const z = game.granaryDoorZone;
-      ctx.strokeStyle = 'rgba(255, 240, 190, 0.55)';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(z.x, z.y, z.w, z.h);
+      if (isNear(game.player, game.granaryDoorZone, 58)) {
+        drawInteractOutline(game.granaryDoorZone);
+
+        const z = game.granaryDoorZone;
+        ctx.fillStyle = 'rgba(45,30,18,0.9)';
+        ctx.fillRect(z.x - 20, z.y - 28, 84, 20);
+        ctx.fillStyle = '#fff4c4';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('空白鍵進入', z.x - 14, z.y - 18);
+      }
     }
 
     function drawDoorPrompt() {
