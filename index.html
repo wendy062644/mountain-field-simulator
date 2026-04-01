@@ -378,7 +378,7 @@
       game.carryingHarvest = false;
       game.allHarvested = false;
 
-      game.storageZone = { x: 11.8 * TILE, y: 15.2 * TILE, w: 2.2 * TILE, h: 2.2 * TILE };
+      game.storageZone = { x: 21.8 * TILE, y: 18.0 * TILE, w: 3.0 * TILE, h: 2.8 * TILE };
       game.storedBundles = 0;
       game.allStored = false;
       game.camera = { x: 0, y: 0 };
@@ -1082,7 +1082,7 @@
         game.storedBundles++;
 
         if (game.storedBundles < game.harvestTarget) {
-          setMessage(`你把一束小米放進穀倉。入倉進度：${game.storedBundles} / ${game.harvestTarget}`);
+          setMessage(`你把小米放進穀倉，乾燥的穀粒發出輕微聲響。入倉進度：${game.storedBundles} / ${game.harvestTarget}`);
         } else {
           game.allStored = true;
           moveElderTo('storageGuide');
@@ -1521,7 +1521,7 @@
       } else if (!game.allHarvested) {
         missionEl.textContent = `任務：採收成熟小米（${game.harvestCount} / ${game.harvestTarget}）`;
       } else if (!game.allStored) {
-        missionEl.textContent = `任務：把小米送入穀倉（${game.storedBundles} / ${game.harvestTarget}）`;
+        missionEl.textContent = `把小米送到房子旁的穀倉（${game.storedBundles} / ${game.harvestTarget}）`;
       } else {
         missionEl.textContent = '任務完成：你完成了生長、採收與入倉';
       }
@@ -2094,36 +2094,59 @@
 
     function drawGranary() {
       const z = game.storageZone;
-      const x = z.x - 8;
-      const y = z.y - 30;
+      const x = z.x - 18;
+      const y = z.y - 78;
 
       // 支柱
       ctx.fillStyle = '#5c4021';
-      ctx.fillRect(x + 6, y + 26, 6, 26);
-      ctx.fillRect(x + 42, y + 26, 6, 26);
+      ctx.fillRect(x + 14, y + 58, 10, 46);
+      ctx.fillRect(x + 74, y + 58, 10, 46);
+
+      // 支柱上防鼠盤
+      ctx.fillStyle = '#d8c7a0';
+      ctx.fillRect(x + 10, y + 54, 18, 6);
+      ctx.fillRect(x + 70, y + 54, 18, 6);
 
       // 倉體
       ctx.fillStyle = '#7b5a34';
-      ctx.fillRect(x, y + 8, 54, 24);
+      ctx.fillRect(x, y + 22, 96, 42);
+
+      // 木板紋理
+      ctx.fillStyle = '#8c6a3d';
+      for (let i = 0; i < 5; i++) {
+        ctx.fillRect(x + 6, y + 28 + i * 7, 84, 3);
+      }
 
       // 屋頂
       ctx.fillStyle = '#4a3a2a';
       ctx.beginPath();
-      ctx.moveTo(x - 4, y + 10);
-      ctx.lineTo(x + 20, y - 6);
-      ctx.lineTo(x + 58, y + 10);
+      ctx.moveTo(x - 8, y + 24);
+      ctx.lineTo(x + 28, y);
+      ctx.lineTo(x + 72, y);
+      ctx.lineTo(x + 104, y + 24);
       ctx.closePath();
       ctx.fill();
 
+      // 屋頂下緣
+      ctx.fillStyle = '#5b4833';
+      ctx.fillRect(x - 2, y + 22, 100, 6);
+
       // 倉門
       ctx.fillStyle = '#e7d7a4';
-      ctx.fillRect(x + 20, y + 15, 12, 10);
+      ctx.fillRect(x + 38, y + 34, 20, 18);
+
+      // 門高亮（提示可互動）
+      if (game.carryingHarvest) {
+        ctx.strokeStyle = '#fff4c4';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x + 38, y + 34, 20, 18);
+      }
 
       // 已入倉束數
       if (game.storedBundles > 0) {
         ctx.fillStyle = '#d4b14c';
-        for (let i = 0; i < Math.min(game.storedBundles, 4); i++) {
-          ctx.fillRect(x + 6 + i * 10, y + 12, 6, 10);
+        for (let i = 0; i < Math.min(game.storedBundles, 5); i++) {
+          ctx.fillRect(x + 8 + i * 14, y + 28, 8, 16);
         }
       }
     }
