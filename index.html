@@ -475,8 +475,8 @@
       addBlock(42, 21, 2, 1, 'tree');
       addBlock(45, 21, 1, 1, 'tree');
 
-      addBlock(39, 10, 1, 2, 'tree');
-      addBlock(39, 18, 1, 3, 'tree');
+      addBlock(39, 9, 1, 3, 'tree');
+      addBlock(39, 17, 1, 4, 'tree');
       addBlock(52, 9, 1, 3, 'tree');
       addBlock(52, 16, 1, 4, 'tree');
 
@@ -2115,7 +2115,7 @@
 
       // 主路
       ctx.strokeStyle = '#bc8746';
-      ctx.lineWidth = 38;   // 原本再加寬
+      ctx.lineWidth = 60;   // 原本再加寬
       ctx.beginPath();
       ctx.moveTo(points[0].x, points[0].y);
       for (let i = 1; i < points.length; i++) {
@@ -3035,7 +3035,7 @@
     function drawGranaryDoorPrompt() {
       if (game.inHouse || game.inGranary) return;
 
-      if (isNear(game.player, game.granaryDoorZone, 58)) {
+      if (isNear(game.player, game.granaryDoorZone, 40)) {
         drawInteractOutline(game.granaryDoorZone);
 
         const z = game.granaryDoorZone;
