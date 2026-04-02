@@ -218,6 +218,13 @@
       if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault();
       if (k === 'r') init();
 
+      if (game.seedMenuOpen) {
+        if (k === '1') { plantCropByIndex(0); return; }
+        if (k === '2') { plantCropByIndex(1); return; }
+        if (k === '3') { plantCropByIndex(2); return; }
+        if (k === '4') { plantCropByIndex(3); return; }
+      }
+
       if (!game.started) {
         if (k === 'a' || k === 'ArrowLeft') game.selectedGender = 'male';
         if (k === 'd' || k === 'ArrowRight') game.selectedGender = 'female';
@@ -253,6 +260,9 @@
       landReady: false,
       landPlots: [],
       landPrepared: false,
+      cropTypes: ['小米', '花生', '芋頭', '地瓜'],
+      seedMenuOpen: false,
+      seedMenuPlot: null,
 
       stoneStacks: [],
       stoneWallBuilt: false,
@@ -381,6 +391,8 @@
       game.landReady = false;
       game.landPlots = [];
       game.landPrepared = false;
+      game.seedMenuOpen = false;
+      game.seedMenuPlot = null;
       game.stoneStacks = [];
       game.stoneWallBuilt = false;
 
@@ -496,19 +508,112 @@
     }
 
     function setupLandPlots() {
-      game.landPlots = [
-        { x: 41.2 * TILE, y: 10.8 * TILE, w: 2.6 * TILE, h: 2.2 * TILE, prepared: false, seeded: false, growth: 0, mature: false, harvested: false },
-        { x: 46.0 * TILE, y: 10.8 * TILE, w: 2.8 * TILE, h: 2.2 * TILE, prepared: false, seeded: false, growth: 0, mature: false, harvested: false },
-        { x: 41.6 * TILE, y: 15.0 * TILE, w: 2.7 * TILE, h: 2.3 * TILE, prepared: false, seeded: false, growth: 0, mature: false, harvested: false },
-        { x: 46.1 * TILE, y: 15.1 * TILE, w: 2.8 * TILE, h: 2.3 * TILE, prepared: false, seeded: false, growth: 0, mature: false, harvested: false }
-      ];
+      game.landPlots = [];
+
+      const startX = 41.2 * TILE;
+      const startY = 10.6 * TILE;
+      const cols = 4;
+      const rows = 3;
+      const plotW = 1.9 * TILE;
+      const plotH = 1.8 * TILE;
+      const gapX = 0.75 * TILE;
+      const gapY = 0.9 * TILE;
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const px = startX + c * (plotW + gapX);
+          const py = startY + r * (plotH + gapY);
+
+          game.landPlots.push({
+            x: px,
+            y: py,
+            w: plotW,
+            h: plotH,
+            prepared: false,
+            seeded: false,
+            cropType: null,
+            growth: 0,
+            mature: false,
+            harvested: false,
+            crops: [
+              { ox: 0.45, oy: 0.40, planted: false },
+              { ox: 1.15, oy: 0.40, planted: false },
+              { ox: 0.45, oy: 0.95, planted: false },
+              { ox: 1.15, oy: 0.95, planted: false }
+            ]
+          });
+        }
+      }
 
       game.stoneStacks = [
-        { x: 40.3 * TILE, y: 13.4 * TILE, w: 1.8 * TILE, h: 0.8 * TILE, done: false },
-        { x: 43.0 * TILE, y: 13.3 * TILE, w: 2.0 * TILE, h: 0.8 * TILE, done: false },
-        { x: 46.0 * TILE, y: 13.5 * TILE, w: 1.8 * TILE, h: 0.8 * TILE, done: false },
-        { x: 48.8 * TILE, y: 13.4 * TILE, w: 1.8 * TILE, h: 0.8 * TILE, done: false }
+        { x: 40.8 * TILE, y: 19.1 * TILE, w: 2.2 * TILE, h: 0.7 * TILE, done: false },
+        { x: 43.4 * TILE, y: 19.1 * TILE, w: 2.2 * TILE, h: 0.7 * TILE, done: false },
+        { x: 46.0 * TILE, y: 19.1 * TILE, w: 2.2 * TILE, h: 0.7 * TILE, done: false },
+        { x: 48.6 * TILE, y: 19.1 * TILE, w: 2.2 * TILE, h: 0.7 * TILE, done: false },
+        { x: 40.2 * TILE, y: 11.0 * TILE, w: 0.7 * TILE, h: 1.8 * TILE, done: false },
+        { x: 40.2 * TILE, y: 13.5 * TILE, w: 0.7 * TILE, h: 1.8 * TILE, done: false },
+        { x: 40.2 * TILE, y: 16.0 * TILE, w: 0.7 * TILE, h: 1.8 * TILE, done: false },
+        { x: 50.9 * TILE, y: 11.0 * TILE, w: 0.7 * TILE, h: 1.8 * TILE, done: false },
+        { x: 50.9 * TILE, y: 13.5 * TILE, w: 0.7 * TILE, h: 1.8 * TILE, done: false },
+        { x: 50.9 * TILE, y: 16.0 * TILE, w: 0.7 * TILE, h: 1.8 * TILE, done: false }
       ];
+    }
+
+    function openSeedMenu(plot) {
+      game.seedMenuOpen = true;
+      game.seedMenuPlot = plot;
+      setMessage('請按 1～4 選擇作物，離開田格一段距離會自動取消。');
+    }
+
+    function cancelSeedMenu(silent = false) {
+      if (!game.seedMenuOpen) return;
+      game.seedMenuOpen = false;
+      game.seedMenuPlot = null;
+      if (!silent) {
+        setMessage('你先離開了這塊田，已取消這次播種選擇。');
+      }
+    }
+
+    function updateSeedMenuState() {
+      if (!game.seedMenuOpen || !game.seedMenuPlot) return;
+      if (game.inHouse || game.inGranary) {
+        cancelSeedMenu(true);
+        return;
+      }
+
+      if (!isNear(game.player, game.seedMenuPlot, 82)) {
+        cancelSeedMenu();
+        updateUI();
+      }
+    }
+
+    function plantCropByIndex(idx) {
+      if (!game.seedMenuOpen || !game.seedMenuPlot) return;
+      if (idx < 0 || idx >= game.cropTypes.length) return;
+
+      const plot = game.seedMenuPlot;
+      const crop = game.cropTypes[idx];
+
+      plot.seeded = true;
+      plot.cropType = crop;
+      plot.crops.forEach(c => c.planted = true);
+
+      game.seedMenuOpen = false;
+      game.seedMenuPlot = null;
+
+      const done = game.landPlots.filter(p => p.seeded).length;
+      const total = game.landPlots.length;
+
+      if (done < total) {
+        setMessage(`你在這塊田裡種下了${crop}。播種進度：${done} / ${total}`);
+      } else {
+        game.allSeeded = true;
+        setupScareDevices();
+        moveElderTo('birdGuide');
+        setDialogue('播種完成。先在田邊架好驅鳥器具，之後鳥來了就拉繩子。', 'elder');
+      }
+
+      updateUI();
     }
 
     function addBlock(tx, ty, tw, th, type) {
@@ -939,19 +1044,19 @@
         } else if (!game.stoneWallBuilt) {
           setDialogue('沿著田邊把石頭堆穩，先把擋土牆做好。', 'elder');
         } else if (!game.allSeeded) {
-          setDialogue('石牆穩了，接下來把小米種子撒進土地裡。', 'elder');
+          setDialogue('石牆穩了，接下來可以選擇作物播種進土地裡。', 'elder');
         } else if (!game.scareReady) {
           setDialogue('先把田邊的驅鳥器具架好。', 'elder');
         } else if (!game.birdPhaseDone) {
           setDialogue('聽到鳥靠近，就去拉繩子把牠們驚走。', 'elder');
         } else if (!game.allMature) {
-          setDialogue('田裡的小米還在長，先讓它慢慢成熟。', 'elder');
+          setDialogue('田裡的作物還在長，先讓它慢慢成熟。', 'elder');
         } else if (!game.allHarvested) {
-          setDialogue('穗已經熟了，去田裡採收小米吧。', 'elder');
+          setDialogue('作物已經熟了，去田裡採收吧。', 'elder');
         } else if (!game.allStored) {
-          setDialogue('把採下來的小米背回穀倉，曬過、收好，才算真正完成。', 'elder');
+          setDialogue('把採下來的作物背回穀倉，曬過、收好，才算真正完成。', 'elder');
         } else {
-          setDialogue('今年的小米已經採收入倉，可以準備迎接收穫之後的分享與祭儀了。', 'elder');
+          setDialogue('今年的作物已經採收入倉，可以準備迎接收穫之後的分享與祭儀了。', 'elder');
         }
         updateUI();
         return;
@@ -1017,13 +1122,13 @@
           const total = game.stoneStacks.length;
 
           if (done < total) {
-            setMessage(`你仔細堆疊石頭，讓擋土牆更穩固。石牆進度：${done} / ${total}`);
+            setMessage(`你把清理出的石頭沿田邊堆疊，作為簡易石牆來保持水土。石牆進度：${done} / ${total}`);
           } else {
             game.stoneWallBuilt = true;
             game.landPrepared = true;
             game.landPlots.forEach(p => p.prepared = true);
             moveElderTo('sowGuide');
-            setDialogue('石牆堆好了，田地穩了。接下來可以開始播種。', 'elder');
+            setDialogue('清理出來的石頭已經沿田邊堆好，能幫助保持水土。現在可以開始播種。', 'elder');
           }
 
           updateUI();
@@ -1031,23 +1136,10 @@
         }
       }
 
-      if (!game.inHouse && game.landPrepared && !game.allSeeded) {
+      if (!game.inHouse && game.landPrepared && !game.allSeeded && !game.seedMenuOpen) {
         const plot = game.landPlots.find(p => p.prepared && !p.seeded && isNear(player, p, 44));
         if (plot) {
-          plot.seeded = true;
-
-          const done = game.landPlots.filter(p => p.seeded).length;
-          const total = game.landPlots.length;
-
-          if (done < total) {
-            setMessage(`你將小米種子撒入土地。播種進度：${done} / ${total}`);
-          } else {
-            game.allSeeded = true;
-            setupScareDevices();
-            moveElderTo('birdGuide');
-            setDialogue('播種完成。先在田邊架好驅鳥器具，之後鳥來了就拉繩子。', 'elder');
-          }
-
+          openSeedMenu(plot);
           updateUI();
           return;
         }
@@ -1120,10 +1212,10 @@
           game.harvestCount++;
 
           if (game.harvestCount < game.harvestTarget) {
-            setMessage(`你割下一束成熟的小米穗。先背回穀倉，再回來繼續採收。`);
+            setMessage(`你採收了一份成熟的${plot.cropType}。先背回穀倉，再回來繼續採收。`);
           } else {
             game.allHarvested = true;
-            setMessage('最後一束小米也採下了。把這一批背回穀倉吧。');
+            setMessage('最後一塊成熟作物也採收完成了。把這一批背回穀倉吧。');
           }
 
           updateUI();
@@ -1136,11 +1228,11 @@
         game.storedBundles++;
 
         if (game.storedBundles < game.harvestTarget) {
-          setMessage(`你把小米放進穀倉，乾燥的穀粒發出輕微聲響。入倉進度：${game.storedBundles} / ${game.harvestTarget}`);
+          setMessage(`你把收成放進穀倉。入倉進度：${game.storedBundles} / ${game.harvestTarget}`);
         } else {
           game.allStored = true;
           moveElderTo('storageGuide');
-          setDialogue('小米都已經入倉了。今年的田地總算有了收成。', 'elder');
+          setDialogue('作物都已經入倉了。今年的田地總算有了收成。', 'elder');
         }
 
         updateUI();
@@ -1156,7 +1248,7 @@
         game.growthProgress = 0;
         game.growthStage = 0;
         moveElderTo('rest');
-        setDialogue('鳥群退去後，就等小米慢慢長成。這段時間要常來看田。', 'elder');
+        setDialogue('鳥群退去後，就等作物慢慢長成。這段時間要常來看田。', 'elder');
         updateUI();
         return;
       }
@@ -1175,9 +1267,9 @@
         });
 
         if (stage === 1) {
-          setMessage('田裡冒出了小米幼苗。');
+          setMessage('田裡冒出了幼苗。');
         } else if (stage === 2) {
-          setMessage('小米慢慢長高了，田地開始變得茂密。');
+          setMessage('作物慢慢長高了，田地開始變得茂密。');
         } else if (stage === 3) {
           game.allMature = true;
           game.landPlots.forEach(p => {
@@ -1185,7 +1277,7 @@
           });
           game.harvestTarget = game.landPlots.filter(p => p.mature).length;
           moveElderTo('storageGuide');
-          setDialogue('小米穗已經轉黃下垂，可以開始採收。採下來後背回穀倉。', 'elder');
+          setDialogue('田裡的作物已經成熟，可以開始採收。採下來後背回穀倉。', 'elder');
         }
 
         updateUI();
@@ -1203,7 +1295,7 @@
         game.landReady = true;
         setupLandPlots();
         moveElderTo('stoneGuide');
-        setDialogue('火勢退去後，地上留下灰燼。先整理田地，沿邊把石頭堆穩，顧住土。', 'elder');
+        setDialogue('火勢退去後，地上留下灰燼。把清理出的石頭沿田邊堆穩，做好保持水土的石牆。', 'elder');
         updateUI();
       }
     }
@@ -1645,17 +1737,17 @@
       } else if (!game.stoneWallBuilt) {
         missionEl.textContent = '任務：堆疊石頭，完成田邊擋土牆';
       } else if (!game.allSeeded) {
-        missionEl.textContent = '任務：在農田播種小米';
+        missionEl.textContent = '任務：在農田播種作物（小米、花生、芋頭、地瓜）';
       } else if (!game.scareReady) {
         missionEl.textContent = '任務：在田邊架設驅鳥器具';
       } else if (!game.birdPhaseDone) {
         missionEl.textContent = `任務：拉動繩索驅鳥（${game.scareCount} / 5）`;
       } else if (!game.allMature) {
-        missionEl.textContent = '任務：等待小米長大成熟';
+        missionEl.textContent = '任務：等待作物長大成熟';
       } else if (!game.allHarvested) {
-        missionEl.textContent = `任務：採收成熟小米（${game.harvestCount} / ${game.harvestTarget}）`;
+        missionEl.textContent = `任務：採收成熟作物（${game.harvestCount} / ${game.harvestTarget}）`;
       } else if (!game.allStored) {
-        missionEl.textContent = `把小米送到房子旁的穀倉（${game.storedBundles} / ${game.harvestTarget}）`;
+        missionEl.textContent = `把收成送到房子旁的穀倉（${game.storedBundles} / ${game.harvestTarget}）`;
       } else {
         missionEl.textContent = '任務完成：你完成了生長、採收與入倉';
       }
@@ -1723,6 +1815,7 @@
           }
         }
         handleInteract();
+        updateSeedMenuState();
         updateBurning();
         updateBirds();
         updateCropGrowth();
@@ -1843,7 +1936,41 @@
         if (game.carrying) drawCarryIcon();
 
         ctx.restore();
+
+        if (game.seedMenuOpen) {
+          drawSeedMenu();
+        }
       }
+    }
+
+    function drawSeedMenu() {
+      const box = { x: canvas.width / 2 - 230, y: canvas.height / 2 - 105, w: 460, h: 210 };
+      ctx.save();
+      ctx.fillStyle = 'rgba(35, 24, 12, 0.94)';
+      ctx.fillRect(box.x, box.y, box.w, box.h);
+      ctx.strokeStyle = '#e6c98a';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(box.x, box.y, box.w, box.h);
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      ctx.fillStyle = '#fff7de';
+      ctx.font = 'bold 26px Noto Sans TC, Microsoft JhengHei, sans-serif';
+      ctx.fillText('選擇要種植的作物', box.x + box.w / 2, box.y + 34);
+
+      ctx.font = '22px Noto Sans TC, Microsoft JhengHei, sans-serif';
+      ctx.fillText('1｜小米', box.x + 130, box.y + 85);
+      ctx.fillText('2｜花生', box.x + 330, box.y + 85);
+      ctx.fillText('3｜芋頭', box.x + 130, box.y + 128);
+      ctx.fillText('4｜地瓜', box.x + 330, box.y + 128);
+
+      ctx.font = '17px Noto Sans TC, Microsoft JhengHei, sans-serif';
+      ctx.fillStyle = '#ffebb9';
+      ctx.fillText('按 1～4 選擇', box.x + box.w / 2, box.y + 170);
+      ctx.fillText('離開這塊田一段距離會自動取消', box.x + box.w / 2, box.y + 194);
+
+      ctx.restore();
     }
 
     function drawGround() {
@@ -1946,10 +2073,10 @@
 
           ctx.strokeStyle = 'rgba(90, 70, 40, 0.6)';
           for (let i = 0; i < 4; i++) {
-            const yy = plot.y + 8 + i * 14;
+            const yy = plot.y + 8 + i * 12;
             ctx.beginPath();
-            ctx.moveTo(plot.x + 8, yy);
-            ctx.lineTo(plot.x + plot.w - 8, yy + ((i % 2) ? 3 : -2));
+            ctx.moveTo(plot.x + 6, yy);
+            ctx.lineTo(plot.x + plot.w - 6, yy);
             ctx.stroke();
           }
         } else {
@@ -1958,8 +2085,8 @@
 
           ctx.strokeStyle = 'rgba(120, 82, 42, 0.7)';
           ctx.lineWidth = 2;
-          for (let i = 0; i < 5; i++) {
-            const yy = plot.y + 8 + i * 12;
+          for (let i = 0; i < 4; i++) {
+            const yy = plot.y + 8 + i * 11;
             ctx.beginPath();
             ctx.moveTo(plot.x + 6, yy);
             ctx.lineTo(plot.x + plot.w - 6, yy);
@@ -1967,83 +2094,110 @@
           }
         }
 
-        // 已播種：覆蓋一層較深土色 + 固定種子點
         if (plot.seeded) {
-          ctx.fillStyle = 'rgba(120, 80, 40, 0.22)';
+          ctx.fillStyle = 'rgba(120, 80, 40, 0.18)';
           ctx.fillRect(plot.x, plot.y, plot.w, plot.h);
 
-          ctx.fillStyle = '#2e1d0f';
-          const cols = 5;
-          const rows = 4;
-          const gapX = plot.w / (cols + 1);
-          const gapY = plot.h / (rows + 1);
+          for (const c of plot.crops) {
+            const px = plot.x + c.ox * TILE;
+            const py = plot.y + c.oy * TILE;
 
-          for (let ry = 1; ry <= rows; ry++) {
-            for (let cx = 1; cx <= cols; cx++) {
-              const px = plot.x + cx * gapX;
-              const py = plot.y + ry * gapY;
-              ctx.fillRect(px, py, 2, 2);
+            if (!plot.harvested && plot.growth === 0) {
+              ctx.fillStyle = '#2e1d0f';
+              ctx.fillRect(px, py, 3, 3);
             }
-          }
-        }
 
-        // 生長中的小米
-        if (plot.seeded && plot.growth >= 1 && !plot.harvested) {
-          const cols = 5;
-          const rows = 4;
-          const gapX = plot.w / (cols + 1);
-          const gapY = plot.h / (rows + 1);
+            if (!plot.harvested && plot.growth >= 1) {
+              if (plot.cropType === '小米') {
+                ctx.strokeStyle = plot.growth >= 3 ? '#9f7d2f' : '#5c9a3b';
+                ctx.lineWidth = plot.growth >= 2 ? 2 : 1.5;
+                ctx.beginPath();
+                ctx.moveTo(px, py + 8);
+                ctx.lineTo(px, py - (plot.growth === 1 ? 6 : plot.growth === 2 ? 12 : 15));
+                ctx.stroke();
+                if (plot.growth >= 2) {
+                  ctx.fillStyle = plot.growth >= 3 ? '#d8b44b' : '#7dbd53';
+                  ctx.fillRect(px - 2, py - (plot.growth === 2 ? 13 : 16), 5, plot.growth === 2 ? 6 : 8);
+                }
+              }
 
-          for (let ry = 1; ry <= rows; ry++) {
-            for (let cx = 1; cx <= cols; cx++) {
-              const px = plot.x + cx * gapX;
-              const py = plot.y + ry * gapY;
+              if (plot.cropType === '花生') {
+                ctx.fillStyle = plot.growth >= 3 ? '#5f9b45' : '#6dbb55';
+                ctx.beginPath();
+                ctx.arc(px, py, plot.growth === 1 ? 4 : plot.growth === 2 ? 6 : 7, 0, Math.PI * 2);
+                ctx.fill();
+                if (plot.growth >= 2) {
+                  ctx.fillStyle = '#9c6b3a';
+                  ctx.fillRect(px - 3, py + 4, 6, 3);
+                }
+              }
 
-              // 莖
-              ctx.strokeStyle = plot.growth >= 3 ? '#9f7d2f' : '#5c9a3b';
-              ctx.lineWidth = plot.growth >= 2 ? 2 : 1.5;
-              ctx.beginPath();
-              ctx.moveTo(px, py + 6);
-              ctx.lineTo(px, py - (plot.growth === 1 ? 4 : plot.growth === 2 ? 9 : 12));
-              ctx.stroke();
+              if (plot.cropType === '芋頭') {
+                ctx.strokeStyle = '#5e9a43';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(px, py + 8);
+                ctx.lineTo(px, py - (plot.growth === 1 ? 4 : plot.growth === 2 ? 8 : 10));
+                ctx.stroke();
+                ctx.fillStyle = plot.growth >= 3 ? '#4c8d3a' : '#67a94f';
+                ctx.beginPath();
+                ctx.moveTo(px, py - 8);
+                ctx.lineTo(px - 7, py);
+                ctx.lineTo(px, py + 1);
+                ctx.lineTo(px + 7, py);
+                ctx.closePath();
+                ctx.fill();
+              }
 
-              // 穗
-              if (plot.growth >= 2) {
-                ctx.fillStyle = plot.growth >= 3 ? '#d8b44b' : '#7dbd53';
-                ctx.fillRect(px - 2, py - (plot.growth === 2 ? 11 : 14), 4, plot.growth === 2 ? 5 : 7);
+              if (plot.cropType === '地瓜') {
+                ctx.strokeStyle = '#4f8f38';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(px, py + 8);
+                ctx.lineTo(px - 5, py + 1);
+                ctx.moveTo(px, py + 8);
+                ctx.lineTo(px + 5, py + 1);
+                ctx.stroke();
+                ctx.fillStyle = plot.growth >= 3 ? '#6cab4a' : '#79c257';
+                ctx.fillRect(px - 4, py - 2, 8, 5);
+                if (plot.growth >= 3) {
+                  ctx.fillStyle = '#8d5aa8';
+                  ctx.fillRect(px - 2, py + 5, 4, 3);
+                }
               }
             }
-          }
-        }
 
-        // 採收後殘梗
-        if (plot.harvested) {
-          ctx.strokeStyle = '#8a6a3d';
-          ctx.lineWidth = 1.5;
-
-          for (let i = 0; i < 10; i++) {
-            const px = plot.x + 10 + i * ((plot.w - 20) / 9);
-            const py = plot.y + plot.h - 8;
-            ctx.beginPath();
-            ctx.moveTo(px, py);
-            ctx.lineTo(px, py - 6);
-            ctx.stroke();
+            if (plot.harvested) {
+              ctx.strokeStyle = '#8a6a3d';
+              ctx.lineWidth = 1.2;
+              ctx.beginPath();
+              ctx.moveTo(px, py + 6);
+              ctx.lineTo(px, py + 1);
+              ctx.stroke();
+            }
           }
         }
       }
 
       for (const s of game.stoneStacks) {
-        ctx.fillStyle = s.done ? '#6c6a67' : 'rgba(120, 120, 120, 0.45)';
+        ctx.fillStyle = s.done ? '#6c6a67' : 'rgba(120, 120, 120, 0.35)';
         ctx.fillRect(s.x, s.y, s.w, s.h);
 
-        ctx.strokeStyle = s.done ? '#3f3d3a' : 'rgba(255, 240, 200, 0.65)';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = s.done ? '#3f3d3a' : 'rgba(255, 240, 200, 0.55)';
+        ctx.lineWidth = 1.5;
         ctx.strokeRect(s.x, s.y, s.w, s.h);
 
-        // 石頭紋理
+        const horizontal = s.w > s.h;
         ctx.fillStyle = s.done ? '#8c8a86' : '#9d9a95';
-        for (let i = 0; i < 4; i++) {
-          ctx.fillRect(s.x + 6 + i * 12, s.y + 4 + (i % 2) * 4, 10, 4);
+
+        if (horizontal) {
+          for (let i = 0; i < 4; i++) {
+            ctx.fillRect(s.x + 4 + i * (s.w / 4), s.y + 2 + (i % 2) * 2, 12, s.h - 4);
+          }
+        } else {
+          for (let i = 0; i < 4; i++) {
+            ctx.fillRect(s.x + 2 + (i % 2) * 2, s.y + 4 + i * (s.h / 4), s.w - 4, 10);
+          }
         }
       }
     }
@@ -2260,28 +2414,16 @@
         }
       }
 
-      // 燒完後：灰燼
+      // 燒完後：淡淡燒痕
       if (game.ashReady) {
-        // 焦黑底
-        ctx.fillStyle = 'rgba(45, 35, 28, 0.72)';
-        ctx.fillRect(z.x + 8, z.y + z.h - 26, z.w - 16, 18);
+        ctx.fillStyle = 'rgba(55, 45, 35, 0.28)';
+        ctx.fillRect(z.x + 8, z.y + z.h - 18, z.w - 16, 10);
 
-        // 灰燼堆
-        ctx.fillStyle = '#6e6a66';
-        ctx.fillRect(z.x + 14, z.y + z.h - 22, z.w - 28, 6);
-        ctx.fillRect(z.x + 20, z.y + z.h - 30, z.w - 40, 8);
-
-        ctx.fillStyle = '#8b8783';
-        ctx.fillRect(z.x + 24, z.y + z.h - 34, 12, 4);
-        ctx.fillRect(z.x + 42, z.y + z.h - 32, 10, 4);
-        ctx.fillRect(z.x + 62, z.y + z.h - 35, 14, 5);
-
-        // 零散灰燼
-        ctx.fillStyle = 'rgba(210, 205, 198, 0.55)';
-        for (let i = 0; i < 12; i++) {
-          const ax = z.x + 10 + i * 7;
-          const ay = z.y + z.h - 14 - (i % 3);
-          ctx.fillRect(ax, ay, 3, 2);
+        ctx.fillStyle = 'rgba(120, 116, 110, 0.35)';
+        for (let i = 0; i < 10; i++) {
+          const ax = z.x + 12 + i * 8;
+          const ay = z.y + z.h - 14 - (i % 2);
+          ctx.fillRect(ax, ay, 4, 2);
         }
       }
     }
