@@ -457,9 +457,9 @@
       addBlock(18, 17, 1, 10, 'tree');
       addBlock(19, 4, 10, 1, 'tree');
       addBlock(19, 26, 16, 1, 'tree');
-      addBlock(28, 6, 1, 6, 'tree');
-      addBlock(28, 16, 1, 10, 'tree');
-      addBlock(33, 4, 1, 7, 'tree');
+      addBlock(28, 5, 1, 7, 'tree');
+      addBlock(28, 17, 1, 9, 'tree');
+      addBlock(33, 4, 1, 8, 'tree');
       addBlock(33, 17, 1, 10, 'tree');
       addBlock(37, 6, 1, 6, 'tree');
       addBlock(37, 18, 1, 8, 'tree');
@@ -1987,6 +1987,10 @@
       ctx.restore();
     }
 
+    function roadY(x, baseY) {
+      return baseY - getSlopeOffset(x) * 0.35;
+    }
+
     function getSlopeOffset(worldX) {
       const startX = 10 * TILE;
       const endX = 39 * TILE;
@@ -2074,38 +2078,81 @@
     }
 
     function drawRoad() {
-      ctx.fillStyle = '#bc8746';
+      // 先算出「第三排樹叢缺口」的高度
+      // 從這裡開始，後面都固定差不多這個高度，不再往上
+      const flatY = roadY(33.5 * TILE, 15.2 * TILE);
 
-      // 房子前的小路（低處平地）
-      ctx.fillRect(9 * TILE, 17.4 * TILE, 2.5 * TILE, 1.5 * TILE);
+      const points = [
+        // 石板屋前
+        { x: 8.8 * TILE,  y: roadY(8.8 * TILE, 18.2 * TILE) },
+        { x: 12.0 * TILE, y: roadY(12.0 * TILE, 17.9 * TILE) },
+        { x: 15.8 * TILE, y: roadY(15.8 * TILE, 17.1 * TILE) },
 
-      const startX = 9.5 * TILE;
-      const endX = 38.8 * TILE;
-      const baseY = 18.0 * TILE;
-      const segW = 26;
+        // 第一列樹叢缺口
+        { x: 18.5 * TILE, y: roadY(18.5 * TILE, 16.2 * TILE) },
 
-      for (let x = startX; x < endX; x += segW) {
-        const lift = getSlopeOffset(x);
-        const y = baseY - lift * 0.50;
-        ctx.fillRect(x, y, segW + 2, 42);
+        // 第二列樹叢缺口
+        { x: 23.5 * TILE, y: roadY(23.5 * TILE, 16.0 * TILE) },
+        { x: 28.5 * TILE, y: roadY(28.5 * TILE, 15.8 * TILE) },
+
+        // 第三列樹叢缺口
+        { x: 31.0 * TILE, y: roadY(31.0 * TILE, 15.5 * TILE) },
+        { x: 33.5 * TILE, y: flatY },
+
+        // 第四列樹叢缺口：不再往上
+        { x: 35.5 * TILE, y: flatY },
+
+        // 到農田前：也不再往上
+        { x: 37.5 * TILE, y: flatY },
+
+        // 農田入口：維持同高度附近
+        { x: 39.6 * TILE, y: flatY }
+      ];
+
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      // 主路
+      ctx.strokeStyle = '#bc8746';
+      ctx.lineWidth = 38;   // 原本再加寬
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
       }
+      ctx.stroke();
 
-      // 接近田地入口時改為平接，並把入口加寬、往右延伸，與真正開口更對齊
-      ctx.fillRect(38.15 * TILE, 14.55 * TILE, 2.25 * TILE, 2.25 * TILE);
-
-      // 房子門口的小支路
-      ctx.fillRect(8.5 * TILE, 16.8 * TILE, 1.2 * TILE, 0.8 * TILE);
-
-      for (let x = startX; x < endX; x += 20) {
-        const lift = getSlopeOffset(x);
-        const y = baseY - lift * 0.50;
-
-        ctx.fillStyle = 'rgba(90,55,24,0.12)';
-        ctx.fillRect(x + 3, y + 26, 16, 2);
-
-        ctx.fillStyle = 'rgba(255,230,180,0.10)';
-        ctx.fillRect(x + 8, y + 8, 4, 4);
+      // 陰影
+      ctx.strokeStyle = 'rgba(90,55,24,0.16)';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y + 7);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y + 7);
       }
+      ctx.stroke();
+
+      // 高光
+      ctx.strokeStyle = 'rgba(255,230,180,0.12)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y - 6);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y - 6);
+      }
+      ctx.stroke();
+
+      // 石板屋門口小支路也一起加寬
+      ctx.strokeStyle = '#bc8746';
+      ctx.lineWidth = 24;
+      ctx.beginPath();
+      ctx.moveTo(8.1 * TILE, 17.2 * TILE);
+      ctx.lineTo(9.4 * TILE, 17.9 * TILE);
+      ctx.lineTo(10.3 * TILE, 18.0 * TILE);
+      ctx.stroke();
+
+      ctx.restore();
     }
 
     function drawHouseArea() {
