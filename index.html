@@ -308,7 +308,7 @@
     };
 
     const ELDER_SPOTS = {
-      prayer:     { x: 38.4 * TILE, y: 14.5 * TILE }, // 農田入口外側
+      prayer:     { x: 38.0 * TILE, y: 14.9 * TILE }, // 農田入口外側，略往左下避免堵住開口
       brushGuide: { x: 50.6 * TILE, y: 18.2 * TILE }, // 右下堆置區旁
       burnWatch:  { x: 44.0 * TILE, y: 8.8  * TILE }, // 上方防火道旁
       stoneGuide: { x: 52.6 * TILE, y: 13.8 * TILE }, // 石牆右側
@@ -462,9 +462,9 @@
       addBlock(33, 4, 1, 7, 'tree');
       addBlock(33, 17, 1, 10, 'tree');
       addBlock(37, 6, 1, 6, 'tree');
-      addBlock(37, 16, 1, 10, 'tree');
+      addBlock(37, 18, 1, 8, 'tree');
 
-      // 山田區：移除整圈柵欄，改成自然邊界（大樹、局部開口）
+      // 山田區：保留自然邊界，但縮短入口附近樹叢高度，避免和 NPC 夾住入口
       addBlock(39, 8, 2, 1, 'tree');
       addBlock(42, 8, 2, 1, 'tree');
       addBlock(45, 8, 2, 1, 'tree');
@@ -476,9 +476,9 @@
       addBlock(45, 21, 1, 1, 'tree');
 
       addBlock(39, 10, 1, 2, 'tree');
-      addBlock(39, 17, 1, 3, 'tree');
+      addBlock(39, 18, 1, 3, 'tree');
       addBlock(52, 9, 1, 3, 'tree');
-      addBlock(52, 15, 1, 4, 'tree');
+      addBlock(52, 16, 1, 4, 'tree');
 
       // 入口左側保留開口，右下留出堆置區通道
       const spots = [
@@ -751,10 +751,15 @@
 
     function updateCamera() {
       if (game.inHouse || game.inGranary) return;
+
       const worldW = WORLD.w * TILE;
       const worldH = WORLD.h * TILE;
-      const tx = game.player.x + game.player.w / 2 - canvas.width / 2;
-      const ty = game.player.y + game.player.h / 2 - canvas.height / 2;
+      const playerCenterX = game.player.x + game.player.w / 2;
+      const playerCenterY = game.player.y + game.player.h / 2;
+
+      const tx = playerCenterX - canvas.width / 2;
+      const ty = playerCenterY - canvas.height / 2;
+
       game.camera.x = clamp(tx, 0, Math.max(0, worldW - canvas.width));
       game.camera.y = clamp(ty, 0, Math.max(0, worldH - canvas.height));
     }
@@ -774,11 +779,19 @@
         dy = (dy / len) * p.speed;
       }
 
+      let slopeDy = 0;
+      if (!game.inHouse && !game.inGranary) {
+        const influence = getSlopeInfluence(p.x + p.w / 2, p.y + p.h / 2);
+        if (influence > 0 && Math.abs(dx) > 0.01) {
+          slopeDy = -dx * 0.12 * influence;
+        }
+      }
+
       const nextX = { x: p.x + dx, y: p.y, w: p.w, h: p.h };
       if (!collides(nextX)) p.x += dx;
 
-      const nextY = { x: p.x, y: p.y + dy, w: p.w, h: p.h };
-      if (!collides(nextY)) p.y += dy;
+      const nextY = { x: p.x, y: p.y + dy + slopeDy, w: p.w, h: p.h };
+      if (!collides(nextY)) p.y += dy + slopeDy;
     }
 
     function getNPCCollider(npc) {
@@ -1910,6 +1923,7 @@
         drawRoad();
         drawHouseArea();
         drawField();
+        drawSlopeAccents();
         drawLandPlots();
         drawScareDevices();
         drawBirds();
@@ -1973,48 +1987,136 @@
       ctx.restore();
     }
 
+    function getSlopeOffset(worldX) {
+      const startX = 10 * TILE;
+      const endX = 39 * TILE;
+      const t = clamp((worldX - startX) / (endX - startX), 0, 1);
+      const smooth = t * t * (3 - 2 * t);
+      return smooth * 72;
+    }
+
+    function getSlopeLift(worldX) {
+      return getSlopeOffset(worldX);
+    }
+
+    function isOnSlopeArea(x, y) {
+      return (
+        x >= 12 * TILE &&
+        x <= 38.5 * TILE &&
+        y >= 13.2 * TILE &&
+        y <= 19.8 * TILE
+      );
+    }
+
+    function getSlopeInfluence(x, y) {
+      if (!isOnSlopeArea(x, y)) return 0;
+
+      const left = 12 * TILE;
+      const right = 38.5 * TILE;
+      const top = 13.2 * TILE;
+      const bottom = 19.8 * TILE;
+
+      const tx = clamp((x - left) / (right - left), 0, 1);
+      const tyTop = clamp((y - top) / (2.2 * TILE), 0, 1);
+      const tyBottom = clamp((bottom - y) / (2.2 * TILE), 0, 1);
+
+      const edgeFade = Math.min(tx, tyTop, tyBottom, 1);
+      return clamp(edgeFade * 1.6, 0, 1);
+    }
+
     function drawGround() {
       for (let y = 0; y < WORLD.h; y++) {
         for (let x = 0; x < WORLD.w; x++) {
+          const px = x * TILE;
+          const py = y * TILE;
           const field = x >= 39 && x <= 52 && y >= 8 && y <= 21;
-          ctx.fillStyle = field ? '#c39a58' : '#78b24f';
-          ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+          const slopeLift = getSlopeLift(px + TILE / 2);
+
+          let base = field ? '#c39a58' : '#78b24f';
+          if (!field && x >= 26) base = '#72aa48';
+          if (!field && x >= 36) base = '#6b9f44';
+
+          ctx.fillStyle = base;
+          ctx.fillRect(px, py, TILE, TILE);
+
+          // 往右越高：右側稍亮、左下較深，做出緩坡感
+          ctx.fillStyle = `rgba(255,255,210,${0.03 + slopeLift / 1400})`;
+          ctx.fillRect(px, py, TILE, TILE * 0.48);
+          ctx.fillStyle = `rgba(70,45,20,${0.02 + (44 - slopeLift) / 1800})`;
+          ctx.fillRect(px, py + TILE * 0.58, TILE, TILE * 0.42);
+
+          // 等高線感：往右逐漸出現較密的橫向草紋
+          if (!field && x >= 18 && y > 4 && y < WORLD.h - 2 && (x + y) % 3 === 0) {
+            ctx.fillStyle = 'rgba(255,245,200,0.06)';
+            ctx.fillRect(px + 3, py + 8, TILE - 10, 2);
+          }
+
           ctx.fillStyle = 'rgba(255,255,255,0.07)';
-          if ((x + y) % 3 === 0) ctx.fillRect(x * TILE + 4, y * TILE + 4, 3, 3);
+          if ((x + y) % 3 === 0) ctx.fillRect(px + 4, py + 4, 3, 3);
           ctx.fillStyle = 'rgba(0,0,0,0.05)';
-          if ((x * 7 + y * 11) % 4 === 0) ctx.fillRect(x * TILE + 20, y * TILE + 16, 3, 3);
+          if ((x * 7 + y * 11) % 4 === 0) ctx.fillRect(px + 20, py + 16, 3, 3);
         }
       }
+
+      // 左下低地的陰影感
+      const lowland = ctx.createLinearGradient(0, canvas.height, 0, canvas.height - 220);
+      lowland.addColorStop(0, 'rgba(60,35,12,0.12)');
+      lowland.addColorStop(1, 'rgba(60,35,12,0)');
+      ctx.fillStyle = lowland;
+      ctx.fillRect(0, canvas.height - 230, canvas.width, 230);
+
+      // 右上高地的薄霧亮帶
+      const upland = ctx.createLinearGradient(canvas.width * 0.55, 0, canvas.width, 0);
+      upland.addColorStop(0, 'rgba(255,255,255,0)');
+      upland.addColorStop(1, 'rgba(255,255,230,0.08)');
+      ctx.fillStyle = upland;
+      ctx.fillRect(canvas.width * 0.5, 0, canvas.width * 0.5, canvas.height * 0.7);
     }
 
     function drawRoad() {
       ctx.fillStyle = '#bc8746';
 
-      // 石板屋前的小路
-      ctx.fillRect(9 * TILE, 17 * TILE, 2.5 * TILE, 1.5 * TILE);
+      // 房子前的小路（低處平地）
+      ctx.fillRect(9 * TILE, 17.4 * TILE, 2.5 * TILE, 1.5 * TILE);
 
-      // 通往森林的主路，做成逐段彎折比較自然
-      ctx.fillRect(9.5 * TILE, 17.5 * TILE, 6 * TILE, 1.5 * TILE);
-      ctx.fillRect(15 * TILE, 16.5 * TILE, 6 * TILE, 1.5 * TILE);
-      ctx.fillRect(21 * TILE, 15.5 * TILE, 6 * TILE, 1.5 * TILE);
-      ctx.fillRect(27 * TILE, 14.5 * TILE, 6 * TILE, 1.5 * TILE);
-      ctx.fillRect(33 * TILE, 14 * TILE, 6 * TILE, 1.5 * TILE);
+      const startX = 9.5 * TILE;
+      const endX = 38.8 * TILE;
+      const baseY = 18.0 * TILE;
+      const segW = 26;
 
-      // 接到山田入口
-      ctx.fillRect(38 * TILE, 14 * TILE, 1.5 * TILE, 2 * TILE);
+      for (let x = startX; x < endX; x += segW) {
+        const lift = getSlopeOffset(x);
+        const y = baseY - lift * 0.50;
+        ctx.fillRect(x, y, segW + 2, 42);
+      }
 
-      // short spur toward the house door
-      ctx.fillRect(8.5 * TILE, 16.4 * TILE, 1.2 * TILE, 0.8 * TILE);
+      // 接近田地入口時改為平接，並把入口加寬、往右延伸，與真正開口更對齊
+      ctx.fillRect(38.15 * TILE, 14.55 * TILE, 2.25 * TILE, 2.25 * TILE);
 
-      for (let i = 0; i < 140; i++) {
-        const x = 7 * TILE + (i * 41) % (32 * TILE);
-        const y = 14 * TILE + (i * 23) % (5 * TILE);
-        ctx.fillStyle = i % 2 ? 'rgba(255,230,180,0.12)' : 'rgba(120,75,20,0.08)';
-        ctx.fillRect(x, y, 3, 3);
+      // 房子門口的小支路
+      ctx.fillRect(8.5 * TILE, 16.8 * TILE, 1.2 * TILE, 0.8 * TILE);
+
+      for (let x = startX; x < endX; x += 20) {
+        const lift = getSlopeOffset(x);
+        const y = baseY - lift * 0.50;
+
+        ctx.fillStyle = 'rgba(90,55,24,0.12)';
+        ctx.fillRect(x + 3, y + 26, 16, 2);
+
+        ctx.fillStyle = 'rgba(255,230,180,0.10)';
+        ctx.fillRect(x + 8, y + 8, 4, 4);
       }
     }
 
     function drawHouseArea() {
+      // 低地平台：房子所在位置較低、較平緩
+      ctx.fillStyle = 'rgba(90, 70, 42, 0.18)';
+      ctx.fillRect(2.8 * TILE, 16.8 * TILE, 13.8 * TILE, 4.8 * TILE);
+
+      // 平台上緣，暗示這裡比右邊山田低
+      ctx.fillStyle = 'rgba(70, 48, 28, 0.14)';
+      ctx.fillRect(12.8 * TILE, 14.9 * TILE, 5.6 * TILE, 0.22 * TILE);
+
       // 石板前院
       ctx.fillStyle = '#5e5e5e';
       for (let i = 0; i < 30; i++) {
@@ -2042,6 +2144,16 @@
     }
 
     function drawField() {
+      // 高地平台底色：田地在較高處
+      ctx.fillStyle = 'rgba(95, 72, 40, 0.22)';
+      ctx.fillRect(38.8 * TILE, 8.2 * TILE, 13.2 * TILE, 12.6 * TILE);
+
+      // 平台下緣陰影，像山田抬高一階
+      ctx.fillStyle = 'rgba(70, 45, 24, 0.22)';
+      ctx.fillRect(39.1 * TILE, 19.9 * TILE, 11.9 * TILE, 0.3 * TILE);
+      ctx.fillRect(39.0 * TILE, 19.5 * TILE, 0.28 * TILE, 0.8 * TILE);
+      ctx.fillRect(50.9 * TILE, 19.3 * TILE, 0.28 * TILE, 0.9 * TILE);
+
       // main soil area with more organic shape
       ctx.fillStyle = '#b88745';
       ctx.fillRect(40 * TILE, 9 * TILE, 11 * TILE, 11 * TILE);
@@ -2051,11 +2163,33 @@
       ctx.fillRect(50.5 * TILE, 10 * TILE, 1.5 * TILE, 8 * TILE);
       ctx.fillRect(42 * TILE, 19.5 * TILE, 6 * TILE, 1 * TILE);
 
+      // 土地上半部稍亮，下半部稍深，增加坡面方向
+      const fieldGrad = ctx.createLinearGradient(40 * TILE, 9 * TILE, 51 * TILE, 20 * TILE);
+      fieldGrad.addColorStop(0, 'rgba(255, 228, 170, 0.12)');
+      fieldGrad.addColorStop(1, 'rgba(60, 38, 20, 0.10)');
+      ctx.fillStyle = fieldGrad;
+      ctx.fillRect(39.5 * TILE, 9 * TILE, 12 * TILE, 11.5 * TILE);
+
       ctx.fillStyle = '#8f5d2f';
       for (let y = 9; y < 20; y++) {
         for (let x = 40; x < 51; x++) {
           ctx.fillRect(x * TILE + 2, y * TILE + 20, TILE - 4, 2);
         }
+      }
+    }
+
+
+    function drawSlopeAccents() {
+      ctx.strokeStyle = 'rgba(255, 244, 210, 0.10)';
+      ctx.lineWidth = 2;
+
+      for (let i = 0; i < 5; i++) {
+        const y = (18.8 - i * 2.1) * TILE;
+        ctx.beginPath();
+        ctx.moveTo((13 + i * 2.2) * TILE, y);
+        ctx.lineTo((23 + i * 4.0) * TILE, y - 0.35 * TILE);
+        ctx.lineTo((35 + i * 3.0) * TILE, y - 0.65 * TILE);
+        ctx.stroke();
       }
     }
 
