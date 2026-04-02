@@ -2614,65 +2614,62 @@
       const x = z.x - 24;
       const y = z.y + 44;
 
-      // 支柱
+      // 支柱（下半部不動）
       ctx.fillStyle = '#5c4021';
       ctx.fillRect(x + 20, y + 82, 12, 52);
       ctx.fillRect(x + 98, y + 82, 12, 52);
 
-      // 防鼠盤
+      // 防鼠盤（下半部不動）
       ctx.fillStyle = '#d8c7a0';
       ctx.fillRect(x + 14, y + 76, 24, 8);
       ctx.fillRect(x + 92, y + 76, 24, 8);
 
-      // 平台
+      // 平台（下半部不動）
       ctx.fillStyle = '#6e4c2b';
       ctx.fillRect(x + 8, y + 72, 114, 12);
 
-      // 倉體（上半部加高）
+      // ===== 只把上半部變寬 =====
+      const upperX = x - 18;     // 往左多一點
+      const upperW = 166;       // 原本 130，稍微加寬
+      const upperInset = 10;
+
+      // 倉體
       ctx.fillStyle = '#7b5a34';
-      ctx.fillRect(x, y + 14, 130, 66);
+      ctx.fillRect(upperX, y + 14, upperW, 66);
 
       // 木板紋理
       ctx.fillStyle = '#8c6a3d';
       for (let i = 0; i < 6; i++) {
-        ctx.fillRect(x + 8, y + 30 + i * 8, 114, 3);
+        ctx.fillRect(upperX + upperInset, y + 30 + i * 8, upperW - upperInset * 2, 3);
       }
 
       // 側邊立板
       ctx.fillStyle = '#6d4f2e';
-      ctx.fillRect(x + 6, y + 26, 6, 46);
-      ctx.fillRect(x + 118, y + 26, 6, 46);
+      ctx.fillRect(upperX + 6, y + 26, 6, 46);
+      ctx.fillRect(upperX + upperW - 12, y + 26, 6, 46);
 
-      // 屋頂（更寬、更高）
+      // 屋頂
       ctx.fillStyle = '#4a3a2a';
       ctx.beginPath();
-      ctx.moveTo(x - 24, y + 24);
-      ctx.lineTo(x + 20, y - 22);
-      ctx.lineTo(x + 104, y - 22);
-      ctx.lineTo(x + 158, y + 24);
+      ctx.moveTo(upperX - 18, y + 24);
+      ctx.lineTo(upperX + 26, y - 22);
+      ctx.lineTo(upperX + upperW - 34, y - 22);
+      ctx.lineTo(upperX + upperW + 20, y + 24);
       ctx.closePath();
       ctx.fill();
 
       // 屋簷
       ctx.fillStyle = '#5b4833';
-      ctx.fillRect(x - 14, y + 20, 156, 12);
+      ctx.fillRect(upperX - 8, y + 20, upperW + 16, 12);
 
-      // 倉門（稍微加大）
+      // 倉門：維持原位置，讓下半部和進入判定都不用動
       ctx.fillStyle = '#e7d7a4';
       ctx.fillRect(x + 52, y + 34, 30, 26);
 
       if (game.carryingHarvest) {
         ctx.strokeStyle = '#fff4c4';
         ctx.lineWidth = 2;
-        ctx.strokeRect(x + 52, y + 34, 30, 26);
-      }
-
-      // 已入倉束數
-      if (game.storedBundles > 0) {
-        ctx.fillStyle = '#d4b14c';
-        for (let i = 0; i < Math.min(game.storedBundles, 5); i++) {
-          ctx.fillRect(x + 12 + i * 20, y + 32, 10, 18);
-        }
+        ctx.strokeRect(z.x, z.y, z.w, z.h);
       }
     }
 
