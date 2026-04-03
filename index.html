@@ -1609,20 +1609,6 @@
         }
         return;
       }
-
-      if (!game.allHarvested) {
-        for (const p of game.landPlots) {
-          if (p.mature && !p.harvested) {
-            drawTaskGlow(p, 'rgba(255, 235, 160, 0.18)', 8);
-          }
-        }
-        return;
-      }
-
-      if (!game.allStored) {
-        drawTaskGlow(game.storageZone, 'rgba(235, 245, 255, 0.20)', 12);
-        return;
-      }
     }
 
     function roundRect(ctx, x, y, w, h, r) {
