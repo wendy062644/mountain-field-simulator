@@ -211,12 +211,15 @@
       const missionEl = document.getElementById("mission");
       const statusEl = document.getElementById("status");
 
+      const backgroundMusic = new Audio("background_music.mp3");
       const maleSong = new Audio("A.mp3");
       const femaleSong = new Audio("B.mp3");
 
+      backgroundMusic.loop = true;
       maleSong.loop = true;
       femaleSong.loop = true;
 
+      backgroundMusic.volume = 0.5;
       maleSong.volume = 0.7;
       femaleSong.volume = 0.7;
 
@@ -291,6 +294,7 @@
             const n = prompt("請輸入角色名字：", game.playerName || "");
             if (n && n.trim()) game.playerName = n.trim();
             game.started = true;
+            playBackgroundMusic();
             setMessage(`歡迎，${game.playerName}。先熟悉部落，再前往田地。`);
             updateUI();
           }
@@ -373,8 +377,23 @@
         isTalking: false,
       };
 
+      function playBackgroundMusic() {
+        backgroundMusic.play().catch((err) => {
+          console.warn("背景音樂播放失敗：", err);
+        });
+      }
+
+      function resumeBackgroundMusic() {
+        if (!game.started) return;
+
+        backgroundMusic.play().catch((err) => {
+          console.warn("背景音樂恢復播放失敗：", err);
+        });
+      }
+
       function applyAudioSettings() {
         const volume = game.masterVolume / 100;
+        backgroundMusic.volume = volume * 0.5; // 背景音樂稍微小聲一點
         maleSong.volume = volume;
         femaleSong.volume = volume;
       }
@@ -1234,15 +1253,25 @@
         femaleSong.currentTime = 0;
 
         game.currentIndoorAudio = null;
+
+        // NPC 音樂停止後，恢復背景音樂
+        resumeBackgroundMusic();
       }
 
       function playIndoorSong(type) {
-        stopIndoorSong();
+        // 先停止目前的 NPC 音樂
+        maleSong.pause();
+        femaleSong.pause();
+        maleSong.currentTime = 0;
+        femaleSong.currentTime = 0;
 
         let target = null;
         if (type === "male") target = maleSong;
         if (type === "female") target = femaleSong;
         if (!target) return;
+
+        // NPC 音樂開始前，先暫停背景音樂
+        backgroundMusic.pause();
 
         target.play().catch((err) => {
           console.warn("音樂播放失敗：", err);
