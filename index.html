@@ -260,7 +260,7 @@
       landReady: false,
       landPlots: [],
       landPrepared: false,
-      cropTypes: ['小米', '花生', '芋頭', '地瓜'],
+      cropTypes: ['小米', '玉米', '芋頭', '地瓜'],
       seedMenuOpen: false,
       seedMenuPlot: null,
 
@@ -284,17 +284,21 @@
       harvestCount: 0,
       harvestTarget: 0,
       carryingHarvest: false,
+      carryingHarvestCrop: null,
       allHarvested: false,
 
       storageZone: null,
       storedBundles: 0,
+      granaryStoredCrops: { '小米': 0, '玉米': 0, '芋頭': 0, '地瓜': 0 },
       allStored: false,
 
       houseDoorZone: null,
       houseExitZone: null,
       inGranary: false,
       granaryDoorZone: null,
+      granaryHintZone: null,
       granaryExitZone: null,
+      granaryStoreZone: null,
       interiorNPCs: [],
       currentIndoorSinger: null,
       camera: { x: 0, y: 0 },
@@ -351,7 +355,14 @@
         h: g.door.h + 60
       };
 
-      game.granaryExitZone = { x: 580, y: 470, w: 90, h: 78 };
+      const granaryInside = getGranaryInteriorLayout();
+      game.granaryExitZone = granaryInside.exit;
+      game.granaryStoreZone = {
+        x: granaryInside.dryingMat.x - 18,
+        y: granaryInside.dryingMat.y - 14,
+        w: granaryInside.dryingMat.w + 36,
+        h: granaryInside.dryingMat.h + 28
+      };
       game.inGranary = false;
       game.interiorNPCs = [
         {
@@ -411,9 +422,11 @@
       game.harvestCount = 0;
       game.harvestTarget = 0;
       game.carryingHarvest = false;
+      game.carryingHarvestCrop = null;
       game.allHarvested = false;
 
       game.storedBundles = 0;
+      game.granaryStoredCrops = { '小米': 0, '玉米': 0, '芋頭': 0, '地瓜': 0 };
       game.allStored = false;
       game.camera = { x: 0, y: 0 };
       game.started = false;
@@ -701,7 +714,7 @@
       if (game.inHouse || game.inGranary) {
         const roomBounds = game.inHouse
         ? { x: 80, y: 130, w: canvas.width - 160, h: canvas.height - 150 }
-        : { x: 220, y: 150, w: 840, h: 430 };
+        : getGranaryInteriorLayout().room;
 
         const hitRoomEdge =
           box.x < roomBounds.x ||
@@ -715,6 +728,13 @@
           for (const npc of game.interiorNPCs) {
             const hitbox = getNPCCollider(npc);
             if (rectsOverlap(box, hitbox)) return true;
+          }
+        }
+
+        if (game.inGranary) {
+          const layout = getGranaryInteriorLayout();
+          for (const c of layout.colliders) {
+            if (rectsOverlap(box, c)) return true;
           }
         }
 
@@ -809,6 +829,38 @@
       const bx = b.x + b.w / 2;
       const by = b.y + b.h / 2;
       return Math.hypot(ax - bx, ay - by) <= d;
+    }
+
+    function getNearbyHarvestPlot() {
+      if (game.inHouse || game.inGranary) return null;
+      if (!game.allMature || game.carryingHarvest) return null;
+
+      return game.landPlots.find(
+        p => p.mature && !p.harvested && isNear(game.player, p, 44)
+      ) || null;
+    }
+
+    function storeCurrentHarvestInGranary() {
+      const storedCrop = game.carryingHarvestCrop;
+      if (!storedCrop) return;
+
+      game.carryingHarvest = false;
+      game.carryingHarvestCrop = null;
+      game.storedBundles++;
+
+      if (game.granaryStoredCrops[storedCrop] !== undefined) {
+        game.granaryStoredCrops[storedCrop]++;
+      }
+
+      if (game.storedBundles < game.harvestTarget) {
+        setMessage(`你把${storedCrop}放進糧倉。入倉進度：${game.storedBundles} / ${game.harvestTarget}`);
+      } else {
+        game.allStored = true;
+        moveElderTo('storageGuide');
+        setDialogue('作物都已經入倉了。今年的田地總算有了收成。', 'elder');
+      }
+
+      updateUI();
     }
 
     function setDialogue(text, speaker = 'system', title = null) {
@@ -978,6 +1030,11 @@
       canPressInteract = false;
       const player = game.player;
 
+      if (game.inGranary && game.carryingHarvest && isNear(player, game.granaryStoreZone, 62)) {
+        storeCurrentHarvestInGranary();
+        return;
+      }
+
       if (!game.inHouse && isNear(player, game.houseDoorZone, 44)) {
         game.inHouse = true;
         game.player.x = 14.8 * TILE;
@@ -993,7 +1050,7 @@
         game.player.x = 19.2 * TILE;
         game.player.y = 16.8 * TILE;
         game.player.dir = 'up';
-        setMessage('你走進糧倉。裡面堆放著小米束、木架與陶器，空氣中有乾燥穀物的氣味。');
+        setMessage('你走進布農族糧倉。左側堆放小米束，後方吊掛玉米，右側籃中放著芋頭與地瓜，中間留有搬運通道。');
         updateUI();
         return;
       }
@@ -1004,7 +1061,7 @@
         game.player.y = 20.4 * TILE;
         game.player.dir = 'down';
         updateCamera();
-        setMessage('你走出糧倉，回到部落前方空地。');
+        setMessage('你走出布農族糧倉，回到部落前方空地。');
         updateUI();
         return;
       }
@@ -1214,42 +1271,25 @@
       }
 
       if (!game.inHouse && game.allMature && !game.carryingHarvest) {
-        const plot = game.landPlots.find(
-          p => p.mature && !p.harvested && isNear(player, p, 44)
-        );
+        const plot = getNearbyHarvestPlot();
 
         if (plot) {
           plot.harvested = true;
           plot.mature = false;
           game.carryingHarvest = true;
+          game.carryingHarvestCrop = plot.cropType;
           game.harvestCount++;
 
           if (game.harvestCount < game.harvestTarget) {
-            setMessage(`你採收了一份成熟的${plot.cropType}。先背回穀倉，再回來繼續採收。`);
+            setMessage(`你採收了一份成熟的${plot.cropType}。先背回糧倉，再回來繼續採收。`);
           } else {
             game.allHarvested = true;
-            setMessage('最後一塊成熟作物也採收完成了。把這一批背回穀倉吧。');
+            setMessage(`最後一份${plot.cropType}也採收完成了。把這一批背進糧倉吧。`);
           }
 
           updateUI();
           return;
         }
-      }
-
-      if (!game.inHouse && game.carryingHarvest && isNear(player, game.storageZone, 54)) {
-        game.carryingHarvest = false;
-        game.storedBundles++;
-
-        if (game.storedBundles < game.harvestTarget) {
-          setMessage(`你把收成放進穀倉。入倉進度：${game.storedBundles} / ${game.harvestTarget}`);
-        } else {
-          game.allStored = true;
-          moveElderTo('storageGuide');
-          setDialogue('作物都已經入倉了。今年的田地總算有了收成。', 'elder');
-        }
-
-        updateUI();
-        return;
       }
     }
 
@@ -1571,6 +1611,48 @@
       ctx.restore();
     }
 
+    function drawPromptBubble(text, x, y) {
+      ctx.save();
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+
+      const padX = 8;
+      const w = Math.ceil(ctx.measureText(text).width) + padX * 2;
+      const h = 20;
+
+      ctx.fillStyle = 'rgba(45,30,18,0.9)';
+      ctx.fillRect(x, y, w, h);
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x, y, w, h);
+
+      ctx.fillStyle = '#fff4c4';
+      ctx.fillText(text, x + padX, y + h / 2);
+
+      ctx.restore();
+    }
+
+    function drawCropHarvestPrompt() {
+      const plot = getNearbyHarvestPlot();
+      if (!plot) return;
+
+      drawPromptBubble(`空白鍵採收${plot.cropType}`, plot.x, plot.y - 28);
+    }
+
+    function drawGranaryStorePrompt() {
+      if (!game.inGranary || !game.carryingHarvest) return;
+      if (!isNear(game.player, game.granaryStoreZone, 62)) return;
+
+      drawInteractOutline(game.granaryStoreZone, 6);
+      drawPromptBubble(
+        `空白鍵放入${game.carryingHarvestCrop}`,
+        game.granaryStoreZone.x + 8,
+        game.granaryStoreZone.y - 26
+      );
+    }
+
     function drawInteractionHints() {
       const player = game.player;
 
@@ -1657,71 +1739,235 @@
       }
     }
 
+    function getGranaryInteriorLayout() {
+      const room = { x: 220, y: 150, w: 840, h: 430 };
+      const exit = { x: room.x + room.w / 2 - 48, y: room.y + 320, w: 96, h: 78 };
+
+      const milletStacks = [
+        { x: room.x + 56,  y: room.y + 236, w: 116, h: 86 },
+        { x: room.x + 182, y: room.y + 250, w: 96,  h: 72 }
+      ];
+
+      const rootBins = [
+        { x: room.x + room.w - 300, y: room.y + 248, w: 112, h: 72, crop: '地瓜' },
+        { x: room.x + room.w - 170, y: room.y + 232, w: 110, h: 88, crop: '芋頭' }
+      ];
+
+      const rearRack = { x: room.x + 256, y: room.y + 110, w: 328, h: 112 };
+      const cornBeam = { x: room.x + 340, y: room.y + 126, w: 160, h: 24 };
+      const dryingMat = { x: room.x + 340, y: room.y + 250, w: 160, h: 56 };
+
+      return {
+        room,
+        exit,
+        milletStacks,
+        rootBins,
+        rearRack,
+        cornBeam,
+        dryingMat,
+        colliders: [
+          ...milletStacks.map(s => ({ x: s.x, y: s.y, w: s.w, h: s.h })),
+          ...rootBins.map(b => ({ x: b.x, y: b.y, w: b.w, h: b.h })),
+          { x: rearRack.x, y: rearRack.y + 8, w: rearRack.w, h: rearRack.h }
+        ]
+      };
+    }
+
+    function drawHangingCorn(x, y, count = 5) {
+      for (let i = 0; i < count; i++) {
+        const cx = x + i * 28;
+        ctx.strokeStyle = '#d8c28a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx + 8, y);
+        ctx.lineTo(cx + 8, y + 16);
+        ctx.stroke();
+
+        ctx.fillStyle = '#d1ac42';
+        ctx.fillRect(cx + 2, y + 16, 12, 26);
+        ctx.fillStyle = '#6f9d45';
+        ctx.beginPath();
+        ctx.moveTo(cx + 2, y + 18);
+        ctx.lineTo(cx - 4, y + 28);
+        ctx.lineTo(cx + 2, y + 30);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(cx + 14, y + 20);
+        ctx.lineTo(cx + 20, y + 30);
+        ctx.lineTo(cx + 14, y + 32);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    function drawMilletBundles(x, y, bundles = 6, height = 76) {
+      for (let i = 0; i < bundles; i++) {
+        const bx = x + i * 16;
+        const lift = (i % 2) * 6;
+        ctx.fillStyle = '#d3af4a';
+        ctx.fillRect(bx, y - height + lift, 10, height - lift);
+        ctx.fillStyle = '#8e6230';
+        ctx.fillRect(bx - 1, y - 16 + lift, 12, 4);
+      }
+    }
+
+    function drawRootBasket(bin, itemCount = 0) {
+      ctx.fillStyle = '#8b6338';
+      ctx.fillRect(bin.x, bin.y, bin.w, bin.h);
+      ctx.strokeStyle = '#caa36f';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath();
+        ctx.moveTo(bin.x + 8, bin.y + 10 + i * 12);
+        ctx.lineTo(bin.x + bin.w - 8, bin.y + 10 + i * 12);
+        ctx.stroke();
+      }
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(bin.x + 14 + i * 24, bin.y + 8);
+        ctx.lineTo(bin.x + 14 + i * 24, bin.y + bin.h - 8);
+        ctx.stroke();
+      }
+
+      const maxVisible = 8;
+      const visibleCount = Math.min(itemCount, maxVisible);
+
+      for (let i = 0; i < visibleCount; i++) {
+        const rx = bin.x + 12 + (i % 4) * 24;
+        const ry = bin.y + 18 + Math.floor(i / 4) * 28;
+        if (bin.crop === '芋頭') {
+          ctx.fillStyle = '#6a4e2f';
+          ctx.beginPath();
+          ctx.ellipse(rx + 10, ry + 10, 10, 8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#5d8f41';
+          ctx.beginPath();
+          ctx.moveTo(rx + 10, ry + 2);
+          ctx.lineTo(rx + 3, ry - 4);
+          ctx.lineTo(rx + 10, ry - 1);
+          ctx.lineTo(rx + 17, ry - 4);
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          ctx.fillStyle = '#a75c34';
+          ctx.beginPath();
+          ctx.ellipse(rx + 10, ry + 10, 11, 7, -0.25, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#7ea34a';
+          ctx.fillRect(rx + 8, ry + 2, 3, 4);
+        }
+      }
+    }
+
     function drawGranaryInteriorScene() {
-      // 牆面背景
-      ctx.fillStyle = '#3f2e1c';
+      const layout = getGranaryInteriorLayout();
+      const room = layout.room;
+      const milletCount = game.granaryStoredCrops['小米'];
+      const cornCount = game.granaryStoredCrops['玉米'];
+      const taroCount = game.granaryStoredCrops['芋頭'];
+      const sweetPotatoCount = game.granaryStoredCrops['地瓜'];
+      const totalStored = game.storedBundles;
+
+      // 外層背景
+      ctx.fillStyle = '#322416';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // 內部主空間（縮小視覺範圍）
-      const room = { x: 220, y: 150, w: 840, h: 430 };
-
-      // 後牆
-      ctx.fillStyle = '#4e3923';
+      // 牆體
+      ctx.fillStyle = '#4b3622';
       ctx.fillRect(room.x, room.y, room.w, room.h);
 
-      // 地板
-      ctx.fillStyle = '#7a5a34';
+      // 地板木台（布農族糧倉高架空間感）
+      ctx.fillStyle = '#7a5934';
       ctx.fillRect(room.x, room.y + 300, room.w, 130);
+      ctx.fillStyle = '#6a4c2b';
+      for (let i = 0; i < 11; i++) {
+        ctx.fillRect(room.x + 24 + i * 72, room.y + 312, 54, 92);
+      }
 
-      // 木板紋理
+      // 後牆橫木
       ctx.fillStyle = 'rgba(255,255,255,0.05)';
       for (let i = 0; i < 7; i++) {
-        ctx.fillRect(room.x + 30, room.y + 35 + i * 38, room.w - 60, 3);
+        ctx.fillRect(room.x + 24, room.y + 34 + i * 34, room.w - 48, 3);
       }
 
-      // 左側小米堆（縮小）
-      for (let i = 0; i < 3; i++) {
-        ctx.fillStyle = '#d4b14c';
-        ctx.fillRect(room.x + 70 + i * 16, room.y + 225 - i * 6, 12, 70 + i * 6);
-      }
-
-      // 右側小米束（縮小）
-      for (let i = 0; i < 4; i++) {
-        ctx.fillStyle = '#caa03d';
-        ctx.fillRect(room.x + room.w - 120 + i * 14, room.y + 220 - (i % 2) * 8, 10, 78);
-      }
-
-      // 木架（縮小）
+      // 左側：小米束底座（初始存在，但不預先堆滿）
       ctx.fillStyle = '#5b4024';
-      ctx.fillRect(room.x + 250, room.y + 110, 12, 170);
-      ctx.fillRect(room.x + 500, room.y + 110, 12, 170);
-      ctx.fillRect(room.x + 250, room.y + 110, 262, 12);
-      ctx.fillRect(room.x + 250, room.y + 180, 262, 10);
+      ctx.fillRect(layout.milletStacks[0].x - 10, layout.milletStacks[0].y + 62, 128, 16);
+      ctx.fillRect(layout.milletStacks[1].x - 8, layout.milletStacks[1].y + 50, 104, 14);
 
-      // 架上物件（縮小）
-      ctx.fillStyle = '#8f6a3f';
-      ctx.fillRect(room.x + 285, room.y + 84, 34, 26);
-      ctx.fillRect(room.x + 345, room.y + 82, 40, 28);
+      if (milletCount > 0) {
+        const firstStack = Math.min(milletCount, 6);
+        const secondStack = Math.min(Math.max(milletCount - 6, 0), 5);
 
-      ctx.fillStyle = '#9b6a48';
-      ctx.beginPath();
-      ctx.arc(room.x + 440, room.y + 98, 15, 0, Math.PI * 2);
-      ctx.fill();
+        drawMilletBundles(layout.milletStacks[0].x, layout.milletStacks[0].y + 58, firstStack, 82);
 
-      ctx.fillStyle = '#7f5738';
-      ctx.beginPath();
-      ctx.arc(room.x + 480, room.y + 98, 13, 0, Math.PI * 2);
-      ctx.fill();
+        if (secondStack > 0) {
+          drawMilletBundles(layout.milletStacks[1].x, layout.milletStacks[1].y + 48, secondStack, 68);
+        }
+      }
 
-      // 出口門（縮小）
+      // 後方：木架（空架預設存在）
+      ctx.fillStyle = '#5b4024';
+      ctx.fillRect(layout.rearRack.x, layout.rearRack.y + 92, layout.rearRack.w, 14);
+      ctx.fillRect(layout.rearRack.x, layout.rearRack.y + 36, layout.rearRack.w, 10);
+      ctx.fillRect(layout.rearRack.x + 4, layout.rearRack.y, 12, 106);
+      ctx.fillRect(layout.rearRack.x + layout.rearRack.w - 16, layout.rearRack.y, 12, 106);
+      ctx.fillRect(layout.rearRack.x + 108, layout.rearRack.y, 10, 106);
+      ctx.fillRect(layout.rearRack.x + 218, layout.rearRack.y, 10, 106);
+
+      // 有入倉後才逐步出現架上器物
+      if (totalStored >= 1) {
+        ctx.fillStyle = '#92704b';
+        ctx.fillRect(layout.rearRack.x + 24, layout.rearRack.y + 10, 42, 24);
+      }
+      if (totalStored >= 2) {
+        ctx.fillStyle = '#92704b';
+        ctx.fillRect(layout.rearRack.x + 138, layout.rearRack.y + 12, 46, 22);
+      }
+      if (totalStored >= 3) {
+        ctx.fillStyle = '#9d6d47';
+        ctx.beginPath();
+        ctx.arc(layout.rearRack.x + 270, layout.rearRack.y + 24, 14, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (totalStored >= 4) {
+        ctx.beginPath();
+        ctx.arc(layout.rearRack.x + 304, layout.rearRack.y + 24, 12, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 玉米吊掛區：先有橫桿，玉米等入倉才出現
+      ctx.fillStyle = '#6a4a29';
+      ctx.fillRect(layout.cornBeam.x, layout.cornBeam.y, layout.cornBeam.w, 8);
+      if (cornCount > 0) {
+        drawHangingCorn(layout.cornBeam.x + 10, layout.cornBeam.y + 8, Math.min(cornCount, 5));
+      }
+
+      // 右側：芋頭、地瓜籃區（籃子預設存在，內容物等玩家入倉）
+      drawRootBasket(layout.rootBins[0], sweetPotatoCount);
+      drawRootBasket(layout.rootBins[1], taroCount);
+
+      // 中央搬運走道
+      ctx.fillStyle = '#96734b';
+      ctx.fillRect(layout.dryingMat.x, layout.dryingMat.y, layout.dryingMat.w, layout.dryingMat.h);
+      ctx.strokeStyle = '#c6a57a';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 6; i++) {
+        ctx.beginPath();
+        ctx.moveTo(layout.dryingMat.x + 8, layout.dryingMat.y + 8 + i * 8);
+        ctx.lineTo(layout.dryingMat.x + layout.dryingMat.w - 8, layout.dryingMat.y + 8 + i * 8);
+        ctx.stroke();
+      }
+
+      // 門口／出口區
       ctx.fillStyle = '#3f2816';
-      ctx.fillRect(room.x + 360, room.y + 320, 90, 78);
+      ctx.fillRect(layout.exit.x, layout.exit.y, layout.exit.w, layout.exit.h);
       ctx.strokeStyle = '#c9b27a';
       ctx.lineWidth = 3;
-      ctx.strokeRect(room.x + 360, room.y + 320, 90, 78);
-
+      ctx.strokeRect(layout.exit.x, layout.exit.y, layout.exit.w, layout.exit.h);
       ctx.fillStyle = 'rgba(255,245,210,0.10)';
-      ctx.fillRect(room.x + 372, room.y + 330, 66, 18);
+      ctx.fillRect(layout.exit.x + 12, layout.exit.y + 10, layout.exit.w - 24, 18);
     }
 
     function drawGranaryExitMarker() {
@@ -1738,7 +1984,9 @@
       if (game.inHouse) {
         missionEl.textContent = '探索石板屋，靠近門口按空白鍵可離開';
       } else if (game.inGranary) {
-        missionEl.textContent = '探索糧倉，靠近門口按空白鍵可離開';
+        missionEl.textContent = game.carryingHarvest
+          ? `任務：把${game.carryingHarvestCrop}放進糧倉內`
+          : '探索糧倉，靠近門口按空白鍵可離開';
       } else if (!game.blessingDone) {
         missionEl.textContent = '任務：到農田與長老對話，完成祈福';
       } else if (!game.allCleared) {
@@ -1750,7 +1998,7 @@
       } else if (!game.stoneWallBuilt) {
         missionEl.textContent = '任務：堆疊石頭，完成田邊擋土牆';
       } else if (!game.allSeeded) {
-        missionEl.textContent = '任務：在農田播種作物（小米、花生、芋頭、地瓜）';
+        missionEl.textContent = '任務：在農田播種作物（小米、玉米、芋頭、地瓜）';
       } else if (!game.scareReady) {
         missionEl.textContent = '任務：在田邊架設驅鳥器具';
       } else if (!game.birdPhaseDone) {
@@ -1851,35 +2099,28 @@
         y,
         body,
         door,
-
-        // 改小：只比門略大一點，提示框也會比較準
-        doorway: { x: x + 48, y: y + 38, w: 38, h: 18 },
-
-        // 凹進去減少一半：左右牆保留更多，只在門口讓出小區域
+        doorway: { x: x + 44, y: y + 34, w: 38, h: 28 },
+        ladder: {
+          leftTop:  { x: x + 54, y: y + 80 },
+          leftBottom:{ x: x + 42, y: y + 126 },
+          rightTop: { x: x + 72, y: y + 80 },
+          rightBottom:{ x: x + 60, y: y + 126 }
+        },
         colliders: [
-          // 門上方
           { x: body.x, y: body.y, w: body.w, h: 24 },
-
-          // 左側
           {
             x: body.x,
             y: body.y + 24,
             w: 54,
             h: body.h - 24
           },
-
-          // 右側
           {
             x: body.x + 76,
             y: body.y + 24,
             w: 54,
             h: body.h - 24
           },
-
-          // 左柱
           { x: x + 21, y: y + 84, w: 10, h: 48 },
-
-          // 右柱
           { x: x + 99, y: y + 84, w: 10, h: 48 }
         ]
       };
@@ -1910,9 +2151,11 @@
 
       } else if (game.inGranary) {
         drawGranaryInteriorScene();
+        drawGranaryExitMarker();
         if (isNear(game.player, game.granaryExitZone, 46)) {
           drawInteractOutline(game.granaryExitZone);
         }
+        drawGranaryStorePrompt();
         drawPlayer();
 
       } else {
@@ -1946,6 +2189,7 @@
 
         drawDoorPrompt();
         drawGranaryDoorPrompt();
+        drawCropHarvestPrompt();
         drawPlayer();
         if (game.carrying) drawCarryIcon();
 
@@ -1975,7 +2219,7 @@
 
       ctx.font = '22px Noto Sans TC, Microsoft JhengHei, sans-serif';
       ctx.fillText('1｜小米', box.x + 130, box.y + 85);
-      ctx.fillText('2｜花生', box.x + 330, box.y + 85);
+      ctx.fillText('2｜玉米', box.x + 330, box.y + 85);
       ctx.fillText('3｜芋頭', box.x + 130, box.y + 128);
       ctx.fillText('4｜地瓜', box.x + 330, box.y + 128);
 
@@ -2302,14 +2546,31 @@
                 }
               }
 
-              if (plot.cropType === '花生') {
-                ctx.fillStyle = plot.growth >= 3 ? '#5f9b45' : '#6dbb55';
+              if (plot.cropType === '玉米') {
+                ctx.strokeStyle = '#4f8d35';
+                ctx.lineWidth = plot.growth >= 2 ? 2 : 1.5;
                 ctx.beginPath();
-                ctx.arc(px, py, plot.growth === 1 ? 4 : plot.growth === 2 ? 6 : 7, 0, Math.PI * 2);
+                ctx.moveTo(px, py + 8);
+                ctx.lineTo(px, py - (plot.growth === 1 ? 8 : plot.growth === 2 ? 14 : 16));
+                ctx.stroke();
+
+                ctx.fillStyle = '#5f9a40';
+                ctx.beginPath();
+                ctx.moveTo(px, py - 2);
+                ctx.lineTo(px - 6, py + 5);
+                ctx.lineTo(px - 1, py + 5);
+                ctx.closePath();
                 ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(px, py - 4);
+                ctx.lineTo(px + 6, py + 3);
+                ctx.lineTo(px + 1, py + 4);
+                ctx.closePath();
+                ctx.fill();
+
                 if (plot.growth >= 2) {
-                  ctx.fillStyle = '#9c6b3a';
-                  ctx.fillRect(px - 3, py + 4, 6, 3);
+                  ctx.fillStyle = plot.growth >= 3 ? '#d7b54a' : '#c7d35b';
+                  ctx.fillRect(px + 2, py - (plot.growth === 2 ? 4 : 7), 5, plot.growth === 2 ? 9 : 11);
                 }
               }
 
@@ -2611,26 +2872,26 @@
 
     function drawGranary() {
       const z = game.storageZone;
-      const x = z.x - 24;
-      const y = z.y + 44;
+      const geo = getGranaryGeometry();
+      const x = geo.x;
+      const y = geo.y;
 
-      // 支柱（下半部不動）
+      // 支柱
       ctx.fillStyle = '#5c4021';
       ctx.fillRect(x + 20, y + 82, 12, 52);
       ctx.fillRect(x + 98, y + 82, 12, 52);
 
-      // 防鼠盤（下半部不動）
+      // 防鼠盤
       ctx.fillStyle = '#d8c7a0';
       ctx.fillRect(x + 14, y + 76, 24, 8);
       ctx.fillRect(x + 92, y + 76, 24, 8);
 
-      // 平台（下半部不動）
+      // 平台
       ctx.fillStyle = '#6e4c2b';
       ctx.fillRect(x + 8, y + 72, 114, 12);
 
-      // ===== 只把上半部變寬 =====
-      const upperX = x - 18;     // 往左多一點
-      const upperW = 166;       // 原本 130，稍微加寬
+      const upperX = x - 18;
+      const upperW = 166;
       const upperInset = 10;
 
       // 倉體
@@ -2662,9 +2923,32 @@
       ctx.fillStyle = '#5b4833';
       ctx.fillRect(upperX - 8, y + 20, upperW + 16, 12);
 
-      // 倉門：維持原位置，讓下半部和進入判定都不用動
+      // 倉門
       ctx.fillStyle = '#e7d7a4';
       ctx.fillRect(x + 52, y + 34, 30, 26);
+
+      // 入口木梯，避免像直接飛進去
+      ctx.strokeStyle = '#654829';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(geo.ladder.leftTop.x, geo.ladder.leftTop.y);
+      ctx.lineTo(geo.ladder.leftBottom.x, geo.ladder.leftBottom.y);
+      ctx.moveTo(geo.ladder.rightTop.x, geo.ladder.rightTop.y);
+      ctx.lineTo(geo.ladder.rightBottom.x, geo.ladder.rightBottom.y);
+      ctx.stroke();
+
+      ctx.lineWidth = 3;
+      for (let i = 0; i < 4; i++) {
+        const t = i / 3;
+        const lx = geo.ladder.leftTop.x + (geo.ladder.leftBottom.x - geo.ladder.leftTop.x) * t;
+        const ly = geo.ladder.leftTop.y + (geo.ladder.leftBottom.y - geo.ladder.leftTop.y) * t;
+        const rx = geo.ladder.rightTop.x + (geo.ladder.rightBottom.x - geo.ladder.rightTop.x) * t;
+        const ry = geo.ladder.rightTop.y + (geo.ladder.rightBottom.y - geo.ladder.rightTop.y) * t;
+        ctx.beginPath();
+        ctx.moveTo(lx, ly);
+        ctx.lineTo(rx, ry);
+        ctx.stroke();
+      }
 
       if (game.carryingHarvest) {
         ctx.strokeStyle = '#fff4c4';
@@ -3032,17 +3316,16 @@
     function drawGranaryDoorPrompt() {
       if (game.inHouse || game.inGranary) return;
 
-      if (isNear(game.player, game.granaryDoorZone, 40)) {
+      const hintZone = game.granaryHintZone || game.granaryDoorZone;
+
+      if (isNear(game.player, hintZone, 46)) {
         drawInteractOutline(game.granaryDoorZone);
 
-        const z = game.granaryDoorZone;
-        ctx.fillStyle = 'rgba(45,30,18,0.9)';
-        ctx.fillRect(z.x - 20, z.y - 28, 84, 20);
-        ctx.fillStyle = '#fff4c4';
-        ctx.font = '12px sans-serif';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('空白鍵進入', z.x - 14, z.y - 18);
+        const text = game.carryingHarvest
+          ? `空白鍵進入糧倉（搬運${game.carryingHarvestCrop}）`
+          : '空白鍵進入';
+
+        drawPromptBubble(text, game.granaryDoorZone.x - 18, game.granaryDoorZone.y - 28);
       }
     }
 
