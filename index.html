@@ -478,6 +478,7 @@
       game.allStored = false;
       game.camera = { x: 0, y: 0 };
       game.started = false;
+      game.frameCount = 0;
       game.settingsOpen = false;
       game.selectedSettingRow = 0;
       game.message = '';
@@ -2091,7 +2092,8 @@
     }
 
     function loop() {
-      if (game.started) {
+      if (game.started && !game.settingsOpen) {
+        game.frameCount++;
         movePlayer();
         if (game.inHouse && game.currentIndoorAudio) {
           let activeNpc = null;
@@ -2230,6 +2232,8 @@
           drawSeedMenu();
         }
       }
+      
+      drawAtmosphere();
 
       if (game.settingsOpen) {
         drawSettingsPanel();
@@ -2864,6 +2868,15 @@
     }
 
     function drawTree(x, y, w, h) {
+      if (IMAGES.tree) {
+        for (let ty = y; ty < y + h; ty += TILE) {
+          for (let tx = x; tx < x + w; tx += TILE) {
+            ctx.drawImage(IMAGES.tree, tx - 6, ty - 4, 44, 40);
+          }
+        }
+        return;
+      }
+      
       for (let ty = y; ty < y + h; ty += TILE) {
         for (let tx = x; tx < x + w; tx += TILE) {
           ctx.fillStyle = '#5a3b20';
@@ -2879,6 +2892,11 @@
     }
 
     function drawBush(x, y, c) {
+      if (IMAGES.bush) {
+        ctx.drawImage(IMAGES.bush, x - 2, y - 2, 32, 26);
+        return;
+      }
+      
       ctx.fillStyle = c;
       ctx.fillRect(x - 2, y + 4, 32, 20);
       ctx.fillStyle = '#79bd57';
@@ -3113,6 +3131,33 @@
 
     function drawPlayer() {
       const p = game.player;
+
+      // 如果有對應的外觀圖片庫 (Sprite) 就使用 Image 繪製
+      const spriteKey = (game.selectedGender === 'female') ? 'player_f' : 'player_m';
+      if (IMAGES[spriteKey]) {
+        let frameIndex = 0;
+        const isMoving = (keys['ArrowLeft'] || keys['a'] || keys['ArrowRight'] || keys['d'] || keys['ArrowUp'] || keys['w'] || keys['ArrowDown'] || keys['s']);
+        if (isMoving) {
+          frameIndex = Math.floor((game.frameCount % 30) / 15) + 1; // 步伐交替
+        }
+
+        const img = IMAGES[spriteKey];
+        const sW = 128; const sH = 128; // 配合剛才建議的 128x128
+        const sX = frameIndex * sW;
+
+        ctx.save();
+        if (p.dir === 'left') {
+          ctx.translate(p.x + p.w / 2, p.y + p.h / 2);
+          ctx.scale(-1, 1);
+          ctx.drawImage(img, sX, 0, sW, sH, -64, -96, 128, 128);
+        } else {
+          ctx.drawImage(img, sX, 0, sW, sH, p.x - (128 - p.w)/2, p.y - 48, 128, 128);
+        }
+        ctx.restore();
+        return; // 提早中斷
+      }
+
+      // -- 以下為原有的幾何圖樣繪製 (預設 Fallback) --
       const female = game.selectedGender === 'female';
       const x = p.x - 36;
       const y = p.y - 108;
@@ -3654,8 +3699,75 @@
       ctx.fillText('左右鍵或 A / D 選擇角色，按 Enter 輸入名字並開始', canvas.width / 2, 590);
     }
 
-    init();
-    loop();
+    function drawAtmosphere() {
+      if (!game.started || game.inHouse || game.inGranary) return;
+      ctx.save();
+      // 一天從早到晚的循環：每 12000 幀一圈 (約 3.3 分鐘)
+      const cycle = 12000;
+      const t = (game.frameCount % cycle) / cycle;
+
+      // 基礎光影覆蓋層：使用不同混合模式來表現清晨、黃昏、夜晚
+      if (t < 0.2) {
+        // 清晨起霧 (0.0 ~ 0.2)
+        const mist = Math.sin((t / 0.2) * Math.PI) * 0.45;
+        ctx.globalCompositeOperation = 'screen';
+        ctx.fillStyle = `rgba(200, 220, 255, ${mist})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      } else if (t > 0.4 && t < 0.7) {
+        // 黃昏夕陽 (0.4 ~ 0.7)
+        const sunset = Math.sin(((t - 0.4) / 0.3) * Math.PI) * 0.35;
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.fillStyle = `rgba(255, 140, 60, ${sunset})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      } else if (t >= 0.7 || t > 0.95) {
+        // 夜晚 (0.7 ~ 1.0)
+        let night = 0;
+        if (t >= 0.7 && t <= 1.0) night = Math.sin(((t - 0.7) / 0.3) * Math.PI) * 0.6;
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.fillStyle = `rgba(30, 40, 70, ${night})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      ctx.restore();
+    }
+
+    // --- 圖片加載器 (Asset Loader) ---
+    const IMAGES = {};
+    const ASSETS_TO_LOAD = {
+      // 在這裡放入您的圖片素材路徑，準備好素材後即可取消註解替換
+      // 'player_m': './player_m.png',
+      // 'player_f': './player_f.png',
+      // 'tree': './tree.png',
+      // 'bush': './bush.png'
+    };
+
+    function loadAssets(callback) {
+      const keys = Object.keys(ASSETS_TO_LOAD);
+      if (keys.length === 0) {
+        callback();
+        return;
+      }
+      let loaded = 0;
+      keys.forEach(k => {
+        const img = new Image();
+        img.onload = () => {
+          IMAGES[k] = img;
+          loaded++;
+          if (loaded === keys.length) callback();
+        };
+        img.onerror = () => {
+          console.warn('圖片載入失敗: ' + k);
+          IMAGES[k] = null;
+          loaded++;
+          if (loaded === keys.length) callback();
+        };
+        img.src = ASSETS_TO_LOAD[k];
+      });
+    }
+
+    loadAssets(() => {
+      init();
+      loop();
+    });
   </script>
 </body>
 </html>
