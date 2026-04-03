@@ -214,8 +214,33 @@
 
     document.addEventListener('keydown', (e) => {
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+
+      if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","Escape"].includes(e.key)) {
+        e.preventDefault();
+      }
+
+      if (k === 'Escape') {
+        if (game.started) {
+          toggleSettingsMenu();
+          updateUI();
+        }
+        return;
+      }
+
+      if (game.settingsOpen) {
+        if (k === 'ArrowUp' || k === 'w') {
+          game.selectedSettingRow = Math.max(0, game.selectedSettingRow - 1);
+        } else if (k === 'ArrowDown' || k === 's') {
+          game.selectedSettingRow = Math.min(1, game.selectedSettingRow + 1);
+        } else if (k === 'ArrowLeft' || k === 'a') {
+          adjustSettingValue(-5);
+        } else if (k === 'ArrowRight' || k === 'd') {
+          adjustSettingValue(5);
+        }
+        return;
+      }
+
       keys[k] = true;
-      if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault();
       if (k === 'r') init();
 
       if (game.seedMenuOpen) {
@@ -263,6 +288,10 @@
       cropTypes: ['小米', '玉米', '芋頭', '地瓜'],
       seedMenuOpen: false,
       seedMenuPlot: null,
+      settingsOpen: false,
+      masterVolume: 70,
+      gameSpeed: 100,
+      selectedSettingRow: 0,
 
       stoneStacks: [],
       stoneWallBuilt: false,
@@ -296,7 +325,6 @@
       houseExitZone: null,
       inGranary: false,
       granaryDoorZone: null,
-      granaryHintZone: null,
       granaryExitZone: null,
       granaryStoreZone: null,
       interiorNPCs: [],
@@ -311,12 +339,40 @@
       isTalking: false
     };
 
+    
+    function applyAudioSettings() {
+      const volume = game.masterVolume / 100;
+      maleSong.volume = volume;
+      femaleSong.volume = volume;
+    }
+
+    function speedFactor() {
+      return game.gameSpeed / 100;
+    }
+
+    function toggleSettingsMenu() {
+      game.settingsOpen = !game.settingsOpen;
+      if (game.settingsOpen) {
+        keys[' '] = false;
+        canPressInteract = false;
+      }
+    }
+
+    function adjustSettingValue(delta) {
+      if (game.selectedSettingRow === 0) {
+        game.masterVolume = Math.max(0, Math.min(100, game.masterVolume + delta));
+        applyAudioSettings();
+      } else if (game.selectedSettingRow === 1) {
+        game.gameSpeed = Math.max(50, Math.min(200, game.gameSpeed + delta));
+      }
+    }
+
     const ELDER_SPOTS = {
       prayer:     { x: 38.0 * TILE, y: 14.9 * TILE }, // 農田入口外側，略往左下避免堵住開口
       brushGuide: { x: 50.6 * TILE, y: 18.2 * TILE }, // 右下堆置區旁
       burnWatch:  { x: 44.0 * TILE, y: 8.8  * TILE }, // 上方防火道旁
-      stoneGuide: { x: 52.6 * TILE, y: 13.8 * TILE }, // 石牆右側
-      sowGuide:   { x: 40.6 * TILE, y: 18.6 * TILE }, // 左下田邊
+      stoneGuide: { x: 53.6 * TILE, y: 13.8 * TILE }, // 石牆右側
+      sowGuide:   { x: 38.6 * TILE, y: 15.6 * TILE }, // 左下田邊
       birdGuide:  { x: 38.4 * TILE, y: 15.2 * TILE }, // 入口旁，方便看驅鳥
       rest:       { x: 34.8 * TILE, y: 14.6 * TILE }, // 田外小路
       storageGuide:{ x: 14.8 * TILE, y: 16.8 * TILE } // 石板屋旁穀倉附近
@@ -330,7 +386,7 @@
     }
 
     function init() {
-      game.player = { x: 7.2 * TILE, y: 19.2 * TILE, w: 20, h: 26, speed: 2.4, dir: 'down' };
+      game.player = { x: 7.2 * TILE, y: 19.2 * TILE, w: 20, h: 26, baseSpeed: 2.4, dir: 'down' };
       game.elder = { x: ELDER_SPOTS.prayer.x, y: ELDER_SPOTS.prayer.y, w: 20, h: 26 };
       game.blocks = [];
       game.weeds = [];
@@ -345,14 +401,6 @@
         y: g.door.y - 4,
         w: g.door.w + 8,
         h: g.door.h + 8
-      };
-
-      // 白框提示區：比真正門口大，而且往下延伸到玩家會站的位置
-      game.granaryHintZone = {
-        x: g.door.x - 20,
-        y: g.door.y - 10,
-        w: g.door.w + 40,
-        h: g.door.h + 60
       };
 
       const granaryInside = getGranaryInteriorLayout();
@@ -430,12 +478,15 @@
       game.allStored = false;
       game.camera = { x: 0, y: 0 };
       game.started = false;
+      game.settingsOpen = false;
+      game.selectedSettingRow = 0;
       game.message = '';
       game.currentSpeaker = 'system';
       game.currentTitle = '魯凱族山田燒墾';
       game.isTalking = false;
       buildWorld();
       updateCamera();
+      applyAudioSettings();
       updateUI();
       refreshDialogueUI();
     }
@@ -789,8 +840,9 @@
 
       if (dx !== 0 || dy !== 0) {
         const len = Math.hypot(dx, dy);
-        dx = (dx / len) * p.speed;
-        dy = (dy / len) * p.speed;
+        const currentSpeed = p.baseSpeed * speedFactor();
+        dx = (dx / len) * currentSpeed;
+        dy = (dy / len) * currentSpeed;
       }
 
       let slopeDy = 0;
@@ -1200,9 +1252,14 @@
         }
       }
 
-      if (!game.inHouse && game.landPrepared && !game.allSeeded && !game.seedMenuOpen) {
+      if (!game.inHouse && !game.inGranary && game.landPrepared && !game.allSeeded && !game.seedMenuOpen) {
         const plot = game.landPlots.find(p => p.prepared && !p.seeded && isNear(player, p, 44));
         if (plot) {
+          game.seedMenuOpen = true;
+          game.seedMenuPlot = plot;
+          game.isTalking = false;
+          game.message = '請用 1～4 選擇要種植的作物。';
+          refreshDialogueUI();
           updateUI();
           return;
         }
@@ -1299,7 +1356,7 @@
         return;
       }
 
-      game.growthProgress = Math.min(1, game.growthProgress + 0.0007);
+      game.growthProgress = Math.min(1, game.growthProgress + 0.0007 * speedFactor());
 
       let stage = 0;
       if (game.growthProgress >= 0.25) stage = 1;
@@ -1333,7 +1390,7 @@
     function updateBurning() {
       if (!game.burningTriggered) return;
 
-      game.burningProgress = Math.min(1, game.burningProgress + 0.0015);
+      game.burningProgress = Math.min(1, game.burningProgress + 0.0015 * speedFactor());
 
       if (game.burningProgress >= 1 && !game.landReady) {
         game.burningTriggered = false;  // 火熄掉
@@ -1376,7 +1433,7 @@
     function updateBirds() {
       if (!game.allSeeded || !game.scareReady || game.birdPhaseDone) return;
 
-      game.birdTimer++;
+      game.birdTimer += speedFactor();
       if (game.birdTimer >= 600 && game.birds.length < 3) {
         spawnBird();
         game.birdTimer = 0;
@@ -1384,14 +1441,14 @@
 
       for (const bird of game.birds) {
         if (bird.scared) {
-          bird.y -= 2.2;
-          bird.x += 1.2;
+          bird.y -= 2.2 * speedFactor();
+          bird.x += 1.2 * speedFactor();
           continue;
         }
 
         const targetY = bird.target.y + 10;
         if (bird.y < targetY) {
-          bird.y += bird.vy;
+          bird.y += bird.vy * speedFactor();
         }
       }
 
@@ -2187,6 +2244,74 @@
           drawSeedMenu();
         }
       }
+
+      if (game.settingsOpen) {
+        drawSettingsPanel();
+      }
+    }
+
+
+    function drawSettingsPanel() {
+      const panelW = canvas.width * 0.34;
+      const panelH = canvas.height * 0.32;
+      const x = (canvas.width - panelW) / 2;
+      const y = (canvas.height - panelH) / 2;
+
+      ctx.save();
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = 'rgba(35, 24, 12, 0.96)';
+      roundRect(ctx, x, y, panelW, panelH, 18);
+      ctx.fill();
+
+      ctx.strokeStyle = '#e6c98a';
+      ctx.lineWidth = 4;
+      roundRect(ctx, x, y, panelW, panelH, 18);
+      ctx.stroke();
+
+      ctx.fillStyle = '#fff7de';
+      ctx.font = 'bold 28px Noto Sans TC, Microsoft JhengHei, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('設定', x + panelW / 2, y + 38);
+
+      const rows = [
+        { label: '聲音', value: `${game.masterVolume}%` },
+        { label: '遊戲速度', value: `${game.gameSpeed}%` }
+      ];
+
+      rows.forEach((row, i) => {
+        const rowY = y + 92 + i * 58;
+        const selected = game.selectedSettingRow === i;
+
+        if (selected) {
+          ctx.fillStyle = 'rgba(255, 230, 160, 0.16)';
+          roundRect(ctx, x + 24, rowY - 22, panelW - 48, 40, 10);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(255, 230, 160, 0.8)';
+          ctx.lineWidth = 2;
+          roundRect(ctx, x + 24, rowY - 22, panelW - 48, 40, 10);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = '#ffebb9';
+        ctx.font = '22px Noto Sans TC, Microsoft JhengHei, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(row.label, x + 42, rowY);
+
+        ctx.fillStyle = '#fff7de';
+        ctx.textAlign = 'right';
+        ctx.fillText(row.value, x + panelW - 42, rowY);
+      });
+
+      ctx.fillStyle = '#d8caa0';
+      ctx.font = '16px Noto Sans TC, Microsoft JhengHei, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('↑↓ 選項　←→ 調整數值　ESC 繼續遊戲', x + panelW / 2, y + panelH - 28);
+
+      ctx.restore();
     }
 
     function drawSeedMenu() {
@@ -3303,8 +3428,9 @@
 
     function drawGranaryDoorPrompt() {
       if (game.inHouse || game.inGranary) return;
+      if (game.allStored) return;
 
-      const hintZone = game.granaryHintZone || game.granaryDoorZone;
+      const hintZone = game.granaryDoorZone;
 
       if (isNear(game.player, hintZone, 46)) {
         drawInteractOutline(game.granaryDoorZone);
