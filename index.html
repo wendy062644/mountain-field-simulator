@@ -572,12 +572,6 @@
       ];
     }
 
-    function openSeedMenu(plot) {
-      game.seedMenuOpen = true;
-      game.seedMenuPlot = plot;
-      setMessage('請按 1～4 選擇作物，離開田格一段距離會自動取消。');
-    }
-
     function cancelSeedMenu(silent = false) {
       if (!game.seedMenuOpen) return;
       game.seedMenuOpen = false;
@@ -1209,7 +1203,6 @@
       if (!game.inHouse && game.landPrepared && !game.allSeeded && !game.seedMenuOpen) {
         const plot = game.landPlots.find(p => p.prepared && !p.seeded && isNear(player, p, 44));
         if (plot) {
-          openSeedMenu(plot);
           updateUI();
           return;
         }
@@ -1638,7 +1631,7 @@
       const plot = getNearbyHarvestPlot();
       if (!plot) return;
 
-      drawPromptBubble(`空白鍵採收${plot.cropType}`, plot.x, plot.y - 28);
+      drawInteractOutline(plot);
     }
 
     function drawGranaryStorePrompt() {
@@ -1646,11 +1639,6 @@
       if (!isNear(game.player, game.granaryStoreZone, 62)) return;
 
       drawInteractOutline(game.granaryStoreZone, 6);
-      drawPromptBubble(
-        `空白鍵放入${game.carryingHarvestCrop}`,
-        game.granaryStoreZone.x + 8,
-        game.granaryStoreZone.y - 26
-      );
     }
 
     function drawInteractionHints() {
@@ -3320,12 +3308,6 @@
 
       if (isNear(game.player, hintZone, 46)) {
         drawInteractOutline(game.granaryDoorZone);
-
-        const text = game.carryingHarvest
-          ? `空白鍵進入糧倉（搬運${game.carryingHarvestCrop}）`
-          : '空白鍵進入';
-
-        drawPromptBubble(text, game.granaryDoorZone.x - 18, game.granaryDoorZone.y - 28);
       }
     }
 
