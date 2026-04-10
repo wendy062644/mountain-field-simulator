@@ -2722,145 +2722,6 @@
         drawInteractOutline(game.granaryStoreZone, 6);
       }
 
-      function drawInteractionHints() {
-        const player = game.player;
-
-        if (!game.inHouse && isNear(player, game.houseDoorZone, 44)) {
-          drawInteractOutline(game.houseDoorZone);
-        }
-
-
-        if (game.inGranary && isNear(player, game.granaryExitZone, 46)) {
-          drawInteractOutline(game.granaryExitZone);
-        }
-
-        if (game.inHouse && isNear(player, game.houseExitZone, 46)) {
-          drawInteractOutline(game.houseExitZone);
-        }
-
-        if (game.inHouse) {
-          for (const npc of game.interiorNPCs) {
-            if (isNear(player, npc, 50)) {
-              drawInteractOutline(npc);
-            }
-          }
-        }
-
-        if (!game.inHouse && isNear(player, game.elder, 56)) {
-          drawInteractOutline(game.elder);
-        }
-
-        if (!game.inHouse && !game.inGranary) {
-          if (game.forestPathZone && isNear(player, game.forestPathZone, 54)) {
-            drawInteractOutline(game.forestPathZone, 8);
-            drawPromptBubble(
-              "空白鍵：前往河邊",
-              game.forestPathZone.x + 6,
-              game.forestPathZone.y - 28,
-              { fitBox: game.forestPathZone, extraWidth: 8 },
-            );
-          }
-
-          const outdoorNpc = getNearbyOutdoorNPC();
-          if (outdoorNpc) {
-            drawInteractOutline(outdoorNpc);
-          }
-
-          const storySpot = getNearbyStorySpot();
-          if (storySpot) {
-            drawInteractOutline(storySpot);
-          }
-        }
-
-        if (!game.inHouse && game.blessingDone && !game.carrying) {
-          const weed = game.weeds.find(
-            (w) =>
-              !w.cleared &&
-              isNear(player, { x: w.x, y: w.y, w: w.w, h: w.h }, 34),
-          );
-          if (weed) {
-            drawInteractOutline({ x: weed.x, y: weed.y, w: weed.w, h: weed.h });
-          }
-        }
-
-        if (
-          !game.inHouse &&
-          game.carrying &&
-          isNear(player, game.stackZone, 58)
-        ) {
-          drawInteractOutline(game.stackZone);
-        }
-
-        if (
-          !game.inHouse &&
-          game.allCleared &&
-          !game.carrying &&
-          isNear(player, game.stackZone, 58) &&
-          !game.burningTriggered &&
-          !game.ashReady
-        ) {
-          drawInteractOutline(game.stackZone);
-        }
-
-        if (!game.inHouse && game.landReady && !game.stoneWallBuilt) {
-          const stack = game.stoneStacks.find(
-            (s) => !s.done && isNear(player, s, 44),
-          );
-          if (stack) {
-            drawInteractOutline(stack);
-          }
-        }
-
-        if (!game.inHouse && game.landPrepared && !game.allSeeded) {
-          const plot = game.landPlots.find(
-            (p) => p.prepared && !p.seeded && isNear(player, p, 44),
-          );
-          if (plot) {
-            drawInteractOutline(plot);
-          }
-        }
-
-        if (!game.inHouse && game.allSeeded && !game.scareReady) {
-          const device = game.scareDevices.find(
-            (d) => !d.placed && isNear(player, d, 42),
-          );
-          if (device) {
-            drawInteractOutline(device);
-          }
-        }
-
-        if (!game.inHouse && game.scareReady && !game.birdPhaseDone) {
-          const rope = game.scareDevices.find(
-            (d) =>
-              d.placed &&
-              isNear(player, { x: d.ropeX, y: d.ropeY, w: 18, h: 18 }, 42),
-          );
-          if (rope) {
-            drawInteractOutline(
-              { x: rope.ropeX, y: rope.ropeY, w: 18, h: 18 },
-              4,
-            );
-          }
-        }
-
-        if (!game.inHouse && game.allMature && !game.carryingHarvest) {
-          const plot = game.landPlots.find(
-            (p) => p.mature && !p.harvested && isNear(player, p, 44),
-          );
-          if (plot) {
-            drawInteractOutline(plot);
-          }
-        }
-
-        if (
-          !game.inHouse &&
-          game.carryingHarvest &&
-          isNear(player, game.storageZone, 54)
-        ) {
-          drawInteractOutline(game.storageZone);
-        }
-      }
-
       function getGranaryInteriorLayout() {
         const room = { x: 220, y: 150, w: 840, h: 430 };
         const exit = {
@@ -4881,7 +4742,7 @@
           if (game.forestPathZone && isNear(player, game.forestPathZone, 54)) {
             drawInteractOutline(game.forestPathZone, 8);
             drawPromptBubble(
-              "空白鍵：前往河邊",
+              "前往河邊",
               game.forestPathZone.x + 6,
               game.forestPathZone.y - 28,
               { fitBox: game.forestPathZone, extraWidth: 8 },
@@ -5033,7 +4894,7 @@
           ctx.font = "12px sans-serif";
           ctx.textAlign = "left";
           ctx.textBaseline = "middle";
-          ctx.fillText("空白鍵進入", z.x - 10, z.y - 18);
+          ctx.fillText("進入石板屋", z.x - 10, z.y - 18);
         }
       }
 
@@ -6173,6 +6034,20 @@
 
         if (game.riverSceneExitZone && isNear(game.player, game.riverSceneExitZone, 62)) {
           drawInteractOutline(game.riverSceneExitZone, 8);
+          drawPromptBubble(
+            game.riverSceneExitZone.label || "返回部落",
+            game.riverSceneExitZone.x + 6,
+            game.riverSceneExitZone.y - 28,
+            {
+              fitBox: {
+                x: game.riverSceneExitZone.x - 10,
+                y: game.riverSceneExitZone.y,
+                w: 62,
+                h: 42,
+              },
+              extraWidth: 20,
+            }
+          );
         }
       }
 
@@ -6246,14 +6121,9 @@
         ctx.font = "15px sans-serif";
         ctx.fillStyle = "#ffebb9";
         ctx.fillText(
-          "序章播放完才會正式進入遊戲，原本山田、石板屋、糧倉與長老流程都會保留。",
-          canvas.width / 2,
-          618,
-        );
-        ctx.fillText(
           "序章期間可按 Enter 或空白鍵跳過。",
           canvas.width / 2,
-          642,
+          618,
         );
       }
 
