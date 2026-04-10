@@ -1967,11 +1967,13 @@
 
         if (game.inGranary && isNear(player, game.granaryExitZone, 46)) {
           game.inGranary = false;
-          game.player.x = 16.9 * TILE;
-          game.player.y = 20.4 * TILE;
-          game.player.dir = "down";
+
+          game.player.x = game.granaryDoorZone.x + game.granaryDoorZone.w - 40;
+          game.player.y = game.granaryDoorZone.y + game.granaryDoorZone.h - game.player.h + 120;
+          game.player.dir = "right";
+
           updateCamera();
-          setMessage("你走出布農族糧倉，回到部落前方空地。");
+          setMessage("你走出布農族糧倉，站在糧倉出入口旁。");
           updateUI();
           return;
         }
