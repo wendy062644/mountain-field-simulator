@@ -917,8 +917,8 @@
           game.weeds.push({
             x: x * TILE + 5,
             y: y * TILE + 6,
-            w: 22,
-            h: 20,
+            w: 65,
+            h: 30,
             cleared: false,
             id: i,
             kind: specialKinds[i] || "normal",
@@ -2837,7 +2837,7 @@
       }
 
       function drawInteractOutline(box, radius = 6) {
-        const pad = 6;
+        const pad = 12;
         const x = box.x - pad;
         const y = box.y - pad;
         const w = box.w + pad * 2;
@@ -4461,14 +4461,25 @@
       function drawWeeds() {
         for (const w of game.weeds) {
           if (w.cleared) continue;
-          const x = w.x - 4;
-          const y = w.y - 10;
-          ctx.fillStyle = "#4f8b34";
-          ctx.fillRect(x + 8, y + 12, 16, 14);
-          ctx.fillRect(x + 2, y + 18, 10, 12);
-          ctx.fillRect(x + 20, y + 18, 10, 12);
-          ctx.fillStyle = "#386525";
-          ctx.fillRect(x + 13, y + 4, 6, 26);
+
+          const img = IMAGES.weed;
+          const drawX = w.x - 8;
+          const drawY = w.y - 14;
+          const drawW = 80;
+          const drawH = 50;
+
+          if (img && img.complete) {
+            ctx.drawImage(img, drawX, drawY, drawW, drawH);
+          } else {
+            const x = w.x - 4;
+            const y = w.y - 10;
+            ctx.fillStyle = "#4f8b34";
+            ctx.fillRect(x + 8, y + 12, 16, 14);
+            ctx.fillRect(x + 2, y + 18, 10, 12);
+            ctx.fillRect(x + 20, y + 18, 10, 12);
+            ctx.fillStyle = "#386525";
+            ctx.fillRect(x + 13, y + 4, 6, 26);
+          }
         }
       }
 
@@ -5017,14 +5028,26 @@
 
       function drawCarryIcon() {
         const p = game.player;
-        const x = p.x - 14;
-        const y = p.y - 40;
-        ctx.fillStyle = "#7b5129";
-        ctx.fillRect(x + 2, y - 12, 42, 12);
-        ctx.fillStyle = "#4c7c2e";
-        ctx.fillRect(x + 7, y - 16, 10, 10);
-        ctx.fillRect(x + 19, y - 20, 10, 12);
-        ctx.fillRect(x + 31, y - 15, 8, 8);
+        const img = IMAGES.weed;
+        const drawX = p.x - 6;
+        const drawY = p.y - 34;
+        const drawW = 32;
+        const drawH = 32;
+
+        if (img && img.complete) {
+          ctx.save();
+          ctx.drawImage(img, drawX, drawY, drawW, drawH);
+          ctx.restore();
+        } else {
+          const x = p.x - 14;
+          const y = p.y - 40;
+          ctx.fillStyle = "#7b5129";
+          ctx.fillRect(x + 2, y - 12, 42, 12);
+          ctx.fillStyle = "#4c7c2e";
+          ctx.fillRect(x + 7, y - 16, 10, 10);
+          ctx.fillRect(x + 19, y - 20, 10, 12);
+          ctx.fillRect(x + 31, y - 15, 8, 8);
+        }
       }
 
       function drawQuestIcon(npc, symbol) {
@@ -5191,7 +5214,7 @@
           const weed = game.weeds.find(
             (w) =>
               !w.cleared &&
-              isNear(player, { x: w.x, y: w.y, w: w.w, h: w.h }, 34),
+              isNear(player, { x: w.x, y: w.y, w: w.w, h: w.h }, 38),
           );
           if (weed) {
             drawInteractOutline({ x: weed.x, y: weed.y, w: weed.w, h: weed.h });
@@ -6860,6 +6883,7 @@
         craftWoman: "./craftWoman.png",
         child: "./child.png",
         oldMap: "./oldMap.png",
+        weed: "./weed.png",
         bg: "./bg.png",
       };
 
