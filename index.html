@@ -248,7 +248,7 @@
         }
 
         if (k === "Escape") {
-          if (game.started) {
+          if (game.started || game.inMainMenu) {
             toggleSettingsMenu();
             updateUI();
           }
@@ -291,6 +291,30 @@
         }
 
         if (!game.started) {
+          if (game.inMainMenu) {
+            if (k === "arrowup" || k === "w") {
+              game.mainMenuSelection = (game.mainMenuSelection - 1 + 5) % 5;
+            }
+            if (k === "arrowdown" || k === "s") {
+              game.mainMenuSelection = (game.mainMenuSelection + 1) % 5;
+            }
+            if (k === "Enter" || k === " ") {
+              if (game.mainMenuSelection === 0) {
+                game.inMainMenu = false; // 進入創建角色
+              } else if (game.mainMenuSelection === 3) {
+                toggleSettingsMenu();
+              } else if (game.mainMenuSelection === 4) {
+                // 退出的視覺效果或alert
+                alert(
+                  "已退出遊戲（網頁版無法直接關閉視窗，您可以手動關閉分頁）。",
+                );
+              } else {
+                alert("此功能尚未開放。");
+              }
+            }
+            return;
+          }
+
           if (game.introPlaying) {
             if (k === "Enter" || k === " ") {
               finishIntroSequence(true);
@@ -298,8 +322,8 @@
             return;
           }
 
-          if (k === "a" || k === "ArrowLeft") game.selectedGender = "male";
-          if (k === "d" || k === "ArrowRight") game.selectedGender = "female";
+          if (k === "a" || k === "arrowleft") game.selectedGender = "male";
+          if (k === "d" || k === "arrowright") game.selectedGender = "female";
           if (k === "Enter") {
             const n = prompt("請輸入角色名字：", game.playerName || "");
             if (n && n.trim()) game.playerName = n.trim();
@@ -317,7 +341,86 @@
         if (e.key === " ") canPressInteract = true;
       });
 
+      canvas.addEventListener("mousemove", (e) => {
+        if (!game.started && game.inMainMenu) {
+          const rect = canvas.getBoundingClientRect();
+          const scaleX = canvas.width / rect.width;
+          const scaleY = canvas.height / rect.height;
+          const x = (e.clientX - rect.left) * scaleX;
+          const y = (e.clientY - rect.top) * scaleY;
+
+          const menus = 5; // 5個菜單按鈕
+          const btnW = 280;
+          const btnH = 48;
+          const startY = 320;
+          const gap = 60;
+
+          let hovered = false;
+          for (let i = 0; i < menus; i++) {
+            const btnX = canvas.width / 2 - btnW / 2;
+            const btnY = startY + i * gap;
+            if (
+              x >= btnX &&
+              x <= btnX + btnW &&
+              y >= btnY &&
+              y <= btnY + btnH
+            ) {
+              game.mainMenuSelection = i;
+              hovered = true;
+              break;
+            }
+          }
+          canvas.style.cursor = hovered ? "pointer" : "default";
+        } else {
+          canvas.style.cursor = "default";
+        }
+      });
+
+      canvas.addEventListener("click", (e) => {
+        if (!game.started && game.inMainMenu) {
+          const rect = canvas.getBoundingClientRect();
+          const scaleX = canvas.width / rect.width;
+          const scaleY = canvas.height / rect.height;
+          const x = (e.clientX - rect.left) * scaleX;
+          const y = (e.clientY - rect.top) * scaleY;
+
+          const menus = 5;
+          const btnW = 280;
+          const btnH = 48;
+          const startY = 320;
+          const gap = 60;
+
+          for (let i = 0; i < menus; i++) {
+            const btnX = canvas.width / 2 - btnW / 2;
+            const btnY = startY + i * gap;
+            if (
+              x >= btnX &&
+              x <= btnX + btnW &&
+              y >= btnY &&
+              y <= btnY + btnH
+            ) {
+              game.mainMenuSelection = i;
+              if (i === 0) {
+                game.inMainMenu = false; // 進入創建角色
+                canvas.style.cursor = "default";
+              } else if (i === 3) {
+                toggleSettingsMenu();
+              } else if (i === 4) {
+                alert(
+                  "已退出遊戲（網頁版無法直接關閉視窗，您可以手動關閉分頁）。",
+                );
+              } else {
+                alert("此功能尚未開放。");
+              }
+              return;
+            }
+          }
+        }
+      });
+
       const game = {
+        inMainMenu: true,
+        mainMenuSelection: 0,
         player: null,
         elder: null,
         blocks: [],
@@ -495,6 +598,8 @@
           dir: "down",
         };
         game.elder = {
+          kind: "elder",
+          speaker: "elder",
           x: ELDER_SPOTS.prayer.x,
           y: ELDER_SPOTS.prayer.y,
           w: 20,
@@ -509,10 +614,10 @@
           h: TILE * 2,
         };
         game.houseDoorZone = {
-          x: 6.4 * TILE,
-          y: 16 * TILE,
+          x: 6.5 * TILE,
+          y: 14 * TILE,
           w: 1.8 * TILE,
-          h: 2.9 * TILE,
+          h: 3 * TILE,
         };
         game.houseExitZone = {
           x: 14.2 * TILE,
@@ -540,7 +645,7 @@
           w: 42,
           h: 42,
           label: "返回部落",
-          promptBox: { x: 1174, y: 240, w: 42, h: 42 }
+          promptBox: { x: 1174, y: 240, w: 42, h: 42 },
         };
         game.riverNPC = {
           id: "riverGirl",
@@ -554,7 +659,7 @@
           skin: "#d0b98c",
           dialog: [
             "你第一次來到溪邊時，像是在找什麼。",
-            "水會帶走聲音，卻不會帶走真正屬於你的名字。"
+            "水會帶走聲音，卻不會帶走真正屬於你的名字。",
           ],
         };
         const riverLayout = getRiverSceneLayout();
@@ -572,15 +677,16 @@
             w: bridge.w,
             h: 36,
             rotation: bridge.rotation || 0,
-          }
+          },
         };
         const g = getGranaryGeometry();
 
+        // 為了符合放大後的糧倉圖片，我們把互動區域與碰撞框對應放大與往下移
         game.granaryDoorZone = {
-          x: g.door.x - 4,
+          x: g.door.x + 20,
           y: g.door.y - 4,
-          w: g.door.w + 8,
-          h: g.door.h + 8,
+          w: g.door.w + 40,
+          h: g.door.h + 40,
         };
 
         const granaryInside = getGranaryInteriorLayout();
@@ -814,7 +920,7 @@
             skin: "#d0b98c",
             dialog: [
               "長老說，真正的大人不是力氣最大的人，而是知道怎麼照看土地的人。",
-              "如果你往溪邊走，會聽見很久以前留下的聲音。"
+              "如果你往溪邊走，會聽見很久以前留下的聲音。",
             ],
           },
           {
@@ -829,7 +935,7 @@
             skin: "#d0b98c",
             dialog: [
               "別急著往前跑。部落裡每一件器物，都有它被留下來的理由。",
-              "山田、糧倉、石板屋，都是人和土地一起活過來的痕跡。"
+              "山田、糧倉、石板屋，都是人和土地一起活過來的痕跡。",
             ],
           },
           {
@@ -844,7 +950,7 @@
             skin: "#d0b98c",
             dialog: [
               "這塊石片上的線，不只是路，也是回來的人走過的方向。",
-              "有些地方不是迷路的人去找，而是被土地記住的人才會走到。"
+              "有些地方不是迷路的人去找，而是被土地記住的人才會走到。",
             ],
           },
           {
@@ -859,15 +965,15 @@
             skin: "#d0b98c",
             dialog: [
               "再往深處去，就是雲豹偶爾回頭的地方。那裡不是用喧鬧靠近的。",
-              "百步蛇守著界線，雲豹守著山林。若你心不靜，什麼也看不見。"
+              "百步蛇守著界線，雲豹守著山林。若你心不靜，什麼也看不見。",
             ],
           },
         ];
 
         game.storySpots = {
           oldMap: {
-            x: 27.6 * TILE,
-            y: 11.0 * TILE,
+            x: 21.8 * TILE,
+            y: 8.0 * TILE,
             w: 2.8 * TILE,
             h: 2.2 * TILE,
             label: "舊地圖",
@@ -936,7 +1042,8 @@
           return;
         }
 
-        const line = npc.dialog[(game.frameCount / 20 | 0) % npc.dialog.length];
+        const line =
+          npc.dialog[((game.frameCount / 20) | 0) % npc.dialog.length];
         setDialogue(line, npc.speaker);
       }
 
@@ -945,22 +1052,34 @@
 
         if (spot === game.storySpots.oldMap) {
           game.storyFlags.readOldMap = true;
-          setMessage("石片上刻著簡單卻熟悉的線條，像山路，也像某種早已記在身體裡的方向。", "舊地圖");
+          setDialogue(
+            "石片上刻著簡單卻熟悉的線條，像山路，也像某種早已記在身體裡的方向。",
+            "oldMap",
+            "舊地圖",
+          );
           return;
         }
 
         if (spot === game.storySpots.leopard) {
           game.storyFlags.sawLeopardSign = true;
-          setMessage("落葉間有爪痕與細長蛇行的痕跡。霧氣裡像有什麼安靜地回頭看了你一眼。", "雲豹出沒地");
+          setMessage(
+            "落葉間有爪痕與細長蛇行的痕跡。霧氣裡像有什麼安靜地回頭看了你一眼。",
+            "雲豹出沒地",
+          );
         }
       }
-
 
       function getRiverSceneLayout() {
         return {
           room: { x: 64, y: 86, w: 1152, h: 612 },
           exitPath: { x: 1006, y: 220, w: 188, h: 196 },
-          bridge: { x: 722, y: 388, w: 94, h: 162, rotation: 40 * Math.PI / 180 },
+          bridge: {
+            x: 722,
+            y: 388,
+            w: 94,
+            h: 162,
+            rotation: (40 * Math.PI) / 180,
+          },
           leftRock: { x: 218, y: 508, w: 136, h: 76 },
           rightRock: { x: 930, y: 206, w: 104, h: 64 },
           sourceForestColliders: [
@@ -970,7 +1089,7 @@
             { x: 158, y: 170, w: 46, h: 104 },
             { x: 198, y: 180, w: 44, h: 98 },
             { x: 50, y: 246, w: 48, h: 54 },
-            { x: 96, y: 240, w: 156, h: 66 }
+            { x: 96, y: 240, w: 156, h: 66 },
           ],
           riverNodes: [
             { x: -18, y: 226, w: 39 },
@@ -983,12 +1102,12 @@
             { x: 864, y: 544, w: 110 },
             { x: 986, y: 682, w: 128 },
             { x: 1098, y: 852, w: 148 },
-            { x: 1188, y: 1012, w: 164 }
+            { x: 1188, y: 1012, w: 164 },
           ],
           sourcePool: { x: 52, y: 226, rx: 17, ry: 6, rot: 0.02 },
           sourceMouth: { x: 64, y: 214, w: 72, h: 30 },
           sourceCliff: { x: 64, y: 154, w: 188, h: 212 },
-          bridgeSafeZone: { x: 700, y: 360, w: 140, h: 214 }
+          bridgeSafeZone: { x: 700, y: 360, w: 140, h: 214 },
         };
       }
 
@@ -998,7 +1117,10 @@
         game.player.x = 34.2 * TILE;
         game.player.y = 9.8 * TILE;
         game.player.dir = "left";
-        setMessage("你沿著部落左側的小徑一路往前，穿過林間後，從河邊右側的山徑走了出來，前方有一座跨過溪流的小木橋。", "河邊");
+        setMessage(
+          "你沿著部落左側的小徑一路往前，穿過林間後，從河邊右側的山徑走了出來，前方有一座跨過溪流的小木橋。",
+          "河邊",
+        );
         updateUI();
       }
 
@@ -1008,7 +1130,10 @@
         game.player.y = 18.25 * TILE;
         game.player.dir = "right";
         updateCamera();
-        setMessage("你沿著右側山徑折返，回到部落左側通往河邊的小路附近。", "森林小徑");
+        setMessage(
+          "你沿著右側山徑折返，回到部落左側通往河邊的小路附近。",
+          "森林小徑",
+        );
         updateUI();
       }
 
@@ -1030,7 +1155,10 @@
       }
 
       function inspectRiverSceneSpot() {
-        setMessage("溪水貼著左側山腳平緩流出，先沿著坡腳向右橫流，再順著地勢往右下方流到畫面外。", "河邊");
+        setMessage(
+          "溪水貼著左側山腳平緩流出，先沿著坡腳向右橫流，再順著地勢往右下方流到畫面外。",
+          "河邊",
+        );
       }
 
       function pointInEllipse(px, py, ellipse, padding = 0) {
@@ -1072,7 +1200,13 @@
         );
       }
 
-      function pointInRotatedRect(px, py, rect, paddingX = 0, paddingY = paddingX) {
+      function pointInRotatedRect(
+        px,
+        py,
+        rect,
+        paddingX = 0,
+        paddingY = paddingX,
+      ) {
         const rot = rect.rotation || 0;
         const cx = rect.x + rect.w / 2;
         const cy = rect.y + rect.h / 2;
@@ -1115,9 +1249,24 @@
         const t2 = t * t;
         const t3 = t2 * t;
         return {
-          x: 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
-          y: 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3),
-          w: 0.5 * ((2 * p1.w) + (-p0.w + p2.w) * t + (2 * p0.w - 5 * p1.w + 4 * p2.w - p3.w) * t2 + (-p0.w + 3 * p1.w - 3 * p2.w + p3.w) * t3),
+          x:
+            0.5 *
+            (2 * p1.x +
+              (-p0.x + p2.x) * t +
+              (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
+              (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
+          y:
+            0.5 *
+            (2 * p1.y +
+              (-p0.y + p2.y) * t +
+              (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
+              (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3),
+          w:
+            0.5 *
+            (2 * p1.w +
+              (-p0.w + p2.w) * t +
+              (2 * p0.w - 5 * p1.w + 4 * p2.w - p3.w) * t2 +
+              (-p0.w + 3 * p1.w - 3 * p2.w + p3.w) * t3),
         };
       }
 
@@ -1143,7 +1292,10 @@
       }
 
       function pointInRiverChannel(px, py, layout, padding = 0) {
-        if (layout.sourcePool && pointInEllipse(px, py, layout.sourcePool, padding)) {
+        if (
+          layout.sourcePool &&
+          pointInEllipse(px, py, layout.sourcePool, padding)
+        ) {
           return true;
         }
 
@@ -1201,24 +1353,37 @@
 
       function riverHitsPlayer(box, layout) {
         const samples = [
-          { x: box.x + box.w * 0.28, y: box.y + box.h * 0.60 },
-          { x: box.x + box.w * 0.50, y: box.y + box.h * 0.60 },
-          { x: box.x + box.w * 0.72, y: box.y + box.h * 0.60 },
+          { x: box.x + box.w * 0.28, y: box.y + box.h * 0.6 },
+          { x: box.x + box.w * 0.5, y: box.y + box.h * 0.6 },
+          { x: box.x + box.w * 0.72, y: box.y + box.h * 0.6 },
           { x: box.x + box.w * 0.24, y: box.y + box.h * 0.78 },
-          { x: box.x + box.w * 0.50, y: box.y + box.h * 0.78 },
+          { x: box.x + box.w * 0.5, y: box.y + box.h * 0.78 },
           { x: box.x + box.w * 0.76, y: box.y + box.h * 0.78 },
           { x: box.x + box.w * 0.32, y: box.y + box.h * 0.92 },
-          { x: box.x + box.w * 0.50, y: box.y + box.h * 0.92 },
+          { x: box.x + box.w * 0.5, y: box.y + box.h * 0.92 },
           { x: box.x + box.w * 0.68, y: box.y + box.h * 0.92 },
         ];
 
-        const footCenter = { x: box.x + box.w * 0.50, y: box.y + box.h * 0.90 };
-        const bodyCenter = { x: box.x + box.w * 0.50, y: box.y + box.h * 0.72 };
-        const footOnBridge = pointOnBridgeWalkway(footCenter.x, footCenter.y, layout);
-        const bodyOnBridge = pointOnBridgeWalkway(bodyCenter.x, bodyCenter.y, layout);
+        const footCenter = { x: box.x + box.w * 0.5, y: box.y + box.h * 0.9 };
+        const bodyCenter = { x: box.x + box.w * 0.5, y: box.y + box.h * 0.72 };
+        const footOnBridge = pointOnBridgeWalkway(
+          footCenter.x,
+          footCenter.y,
+          layout,
+        );
+        const bodyOnBridge = pointOnBridgeWalkway(
+          bodyCenter.x,
+          bodyCenter.y,
+          layout,
+        );
 
-        const bridgeContactCount = samples.filter((p) => pointOnBridgeWalkway(p.x, p.y, layout)).length;
-        if ((footOnBridge && bodyOnBridge && bridgeContactCount >= 4) || bridgeContactCount >= 5) {
+        const bridgeContactCount = samples.filter((p) =>
+          pointOnBridgeWalkway(p.x, p.y, layout),
+        ).length;
+        if (
+          (footOnBridge && bodyOnBridge && bridgeContactCount >= 4) ||
+          bridgeContactCount >= 5
+        ) {
           return false;
         }
 
@@ -1448,10 +1613,10 @@
         };
 
         const door = {
-          x: x + 132,
-          y: y + 106,
-          w: 56,
-          h: 92,
+          x: x + 60, // 將門的實體開口往左移並加寬，避免隱形牆擋住
+          y: y + 90,
+          w: 140,
+          h: 108,
         };
 
         return { x, y, w, h, body, door };
@@ -1460,34 +1625,15 @@
       function getHouseColliders(b) {
         const g = getStoneHouseGeometry(b);
         const body = g.body;
-        const door = g.door;
 
-        // 把可通行門洞往下壓
-        const doorOpeningTop = door.y + 70;
-
+        // 我們將房子的主碰撞框大幅縮減，變成只有房屋靠內側的一道薄牆
+        // 這確保了外圍的門口範圍(HouseDoorZone)與整個屋簷下完全不會卡住玩家！
         return [
-          // 門上方整片牆（往下延長到 doorOpeningTop）
           {
-            x: body.x,
+            x: body.x + 10,
             y: body.y,
-            w: body.w,
-            h: doorOpeningTop - body.y,
-          },
-
-          // 門左側牆
-          {
-            x: body.x,
-            y: doorOpeningTop,
-            w: door.x - body.x,
-            h: body.y + body.h - doorOpeningTop,
-          },
-
-          // 門右側牆
-          {
-            x: door.x + door.w,
-            y: doorOpeningTop,
-            w: body.x + body.w - (door.x + door.w),
-            h: body.y + body.h - doorOpeningTop,
+            w: body.w - 20,
+            h: 80, // 非常薄的一層，只限於房子深處
           },
         ];
       }
@@ -1582,7 +1728,11 @@
         const tx = playerCenterX - canvas.width / 2;
         const ty = playerCenterY - canvas.height / 2;
 
-        game.camera.x = clamp(tx, WORLD_MIN_X, Math.max(0, worldW - canvas.width));
+        game.camera.x = clamp(
+          tx,
+          WORLD_MIN_X,
+          Math.max(0, worldW - canvas.width),
+        );
         game.camera.y = clamp(ty, 0, Math.max(0, worldH - canvas.height));
       }
 
@@ -1610,7 +1760,13 @@
 
         if (dx !== 0 || dy !== 0) {
           const len = Math.hypot(dx, dy);
-          const currentSpeed = p.baseSpeed * speedFactor();
+          let currentSpeed = p.baseSpeed * speedFactor();
+
+          // 河邊空地場景比較大且沒有攝影機跟隨，適度提高走路速度
+          if (game.inRiverScene) {
+            currentSpeed *= 1.8;
+          }
+
           dx = (dx / len) * currentSpeed;
           dy = (dy / len) * currentSpeed;
         }
@@ -1698,6 +1854,7 @@
           hunter: "獵人",
           child: "部落孩子",
           craftWoman: "編織婦人",
+          oldMap: "舊地圖",
           player: game.playerName || "你",
         };
 
@@ -1715,101 +1872,57 @@
         if (!speaker) return;
 
         const ctx = portraitCtx;
-        const isElder = speaker === "elder";
-        const isIndoorMale =
-          speaker === "indoorMale" || speaker === "mapKeeper" || speaker === "hunter";
-        const isIndoorFemale =
-          speaker === "indoorFemale" || speaker === "riverGirl" || speaker === "craftWoman" || speaker === "child";
+        let img = null;
 
-        const clothes = isElder
-          ? "#1a1a1a"
-          : speaker === "riverGirl"
-            ? "#406ea8"
-            : speaker === "craftWoman"
-              ? "#8a3d5b"
-              : speaker === "child"
-                ? "#6c4b9b"
-                : speaker === "mapKeeper"
-                  ? "#5c4732"
-                  : speaker === "hunter"
-                    ? "#3c5a33"
-                    : isIndoorMale
-                      ? "#3f2a1d"
-                      : "#7b2948";
-        const skin = "#d0b98c";
-
-        // 背景光暈
-        ctx.fillStyle = "rgba(255, 222, 150, 0.12)";
-        ctx.beginPath();
-        ctx.arc(92, 84, 62, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 頭髮後輪廓
-        ctx.fillStyle = "#1c1713";
-        ctx.fillRect(56, 38, 66, 74);
-
-        // 臉
-        ctx.fillStyle = skin;
-        ctx.fillRect(66, 42, 46, 44);
-
-        // 頭髮瀏海
-        ctx.fillStyle = "#16120f";
-        ctx.fillRect(62, 34, 54, 18);
-        ctx.fillRect(60, 44, 10, 16);
-        ctx.fillRect(108, 44, 8, 14);
-
-        // 眼睛
-        ctx.fillStyle = "#fff8ea";
-        ctx.fillRect(76, 58, 6, 4);
-        ctx.fillRect(96, 58, 6, 4);
-
-        // 眼珠
-        ctx.fillStyle = "#2d241d";
-        ctx.fillRect(78, 59, 2, 2);
-        ctx.fillRect(98, 59, 2, 2);
-
-        // 鼻口
-        ctx.fillStyle = "#8b6a57";
-        ctx.fillRect(88, 65, 3, 6);
-        ctx.fillStyle = "#6b4434";
-        ctx.fillRect(84, 74, 10, 3);
-
-        // 頸部
-        ctx.fillStyle = skin;
-        ctx.fillRect(80, 86, 16, 12);
-
-        // 上半身衣服
-        ctx.fillStyle = clothes;
-        ctx.fillRect(50, 98, 78, 58);
-
-        // 肩膀
-        ctx.fillRect(42, 108, 20, 26);
-        ctx.fillRect(116, 108, 20, 26);
-
-        // 傳統紋樣
-        ctx.fillStyle = "#efe8d4";
-        ctx.fillRect(84, 100, 8, 50);
-        ctx.fillRect(69, 118, 6, 18);
-        ctx.fillRect(101, 118, 6, 18);
-
-        if (isElder) {
-          // 長老較沉穩的披飾
-          ctx.fillStyle = "#c2b18b";
-          ctx.fillRect(63, 108, 50, 6);
-          ctx.fillRect(72, 114, 8, 18);
-          ctx.fillRect(97, 114, 8, 18);
+        // 根據 speaker 決定使用哪張圖片
+        if (speaker === "elder") {
+          img = IMAGES.elder;
+        } else if (
+          speaker === "craftWoman" ||
+          speaker === "riverGirl" ||
+          speaker === "indoorFemale"
+        ) {
+          img = IMAGES.craftWoman;
+        } else if (speaker === "child") {
+          img = IMAGES.child;
+        } else if (speaker === "oldMap") {
+          img = IMAGES.oldMap;
         } else {
-          // 屋內長者略溫暖的裝飾
-          ctx.fillStyle = "#d6c3a1";
-          ctx.fillRect(68, 108, 40, 5);
-          ctx.fillRect(76, 114, 6, 16);
-          ctx.fillRect(94, 114, 6, 16);
+          // indoorMale, mapKeeper, hunter, 或未知的預設
+          img = IMAGES.npc_villager;
         }
 
-        // 外框
+        if (img && img.complete) {
+          // 加上背景光暈
+          ctx.fillStyle = "rgba(255, 222, 150, 0.12)";
+          ctx.beginPath();
+          ctx.arc(90, 90, 75, 0, Math.PI * 2);
+          ctx.fill();
+
+          // 等比例縮放並置中圖片 (也可選擇只裁切頭部，但這裡先顯示全身/完整素材)
+          const sW = img.naturalWidth || 128;
+          const sH = img.naturalHeight || 128;
+          const targetSize = 140; // 邊框內部大小
+          let scale = Math.min(targetSize / sW, targetSize / sH);
+          let dW = sW * scale;
+          let dH = sH * scale;
+          let dX = (portraitCanvas.width - dW) / 2;
+          let dY = (portraitCanvas.height - dH) / 2 + 10; // 稍微下移對準
+
+          // 由於有些圖片可能是全身，在對話框可能縮很小，若想裁切臉部(假設上半部):
+          // 若要顯示頭部局部，可視圖片狀況調整 sx, sy, sw, sh
+          // 這裡目前直接將完整立繪畫入對話框內
+          ctx.drawImage(img, 0, 0, sW, sH, dX, dY, dW, dH);
+        }
+
+        // 畫一個有質感的原住民風格外框
         ctx.strokeStyle = "#e6c98a";
         ctx.lineWidth = 3;
         ctx.strokeRect(18, 18, 144, 144);
+
+        ctx.strokeStyle = "#8a3d5b";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(22, 22, 136, 136);
       }
 
       function syncDialogueBox() {
@@ -1827,7 +1940,8 @@
             game.currentSpeaker === "mapKeeper" ||
             game.currentSpeaker === "hunter" ||
             game.currentSpeaker === "child" ||
-            game.currentSpeaker === "craftWoman");
+            game.currentSpeaker === "craftWoman" ||
+            game.currentSpeaker === "oldMap");
 
         dialogueEl.classList.toggle("show-portrait", showPortrait);
         drawDialoguePortrait(showPortrait ? game.currentSpeaker : null);
@@ -1902,7 +2016,10 @@
             return;
           }
 
-          if (game.riverSceneExitZone && isNear(player, game.riverSceneExitZone, 62)) {
+          if (
+            game.riverSceneExitZone &&
+            isNear(player, game.riverSceneExitZone, 62)
+          ) {
             leaveRiverScene();
             return;
           }
@@ -1936,8 +2053,7 @@
           return;
         }
 
-
-        if (!game.inHouse && isNear(player, game.houseDoorZone, 44)) {
+        if (!game.inHouse && isNear(player, game.houseDoorZone, 76)) {
           game.inHouse = true;
           game.player.x = 14.8 * TILE;
           game.player.y = 14.2 * TILE;
@@ -1969,7 +2085,11 @@
           game.inGranary = false;
 
           game.player.x = game.granaryDoorZone.x + game.granaryDoorZone.w - 40;
-          game.player.y = game.granaryDoorZone.y + game.granaryDoorZone.h - game.player.h + 120;
+          game.player.y =
+            game.granaryDoorZone.y +
+            game.granaryDoorZone.h -
+            game.player.h +
+            120;
           game.player.dir = "right";
 
           updateCamera();
@@ -2666,7 +2786,12 @@
         const padX = options.padX ?? (fitBox ? 5 : 8);
         const padY = options.padY ?? (fitBox ? 3 : 5);
         const maxWidth = fitBox
-          ? Math.max(46, Math.floor((options.maxWidth || fitBox.w + (options.extraWidth ?? 8))))
+          ? Math.max(
+              46,
+              Math.floor(
+                options.maxWidth || fitBox.w + (options.extraWidth ?? 8),
+              ),
+            )
           : null;
 
         const setFont = () => {
@@ -2681,12 +2806,20 @@
           textWidth = Math.ceil(ctx.measureText(text).width);
         }
 
-        const w = maxWidth ? Math.min(maxWidth, textWidth + padX * 2) : textWidth + padX * 2;
+        const w = maxWidth
+          ? Math.min(maxWidth, textWidth + padX * 2)
+          : textWidth + padX * 2;
         const h = fitBox
-          ? Math.max(16, Math.min(20, Math.floor((options.height || Math.max(16, fitBox.h * 0.24)))))
+          ? Math.max(
+              16,
+              Math.min(
+                20,
+                Math.floor(options.height || Math.max(16, fitBox.h * 0.24)),
+              ),
+            )
           : 20;
         const bubbleX = fitBox ? fitBox.x + (fitBox.w - w) / 2 : x;
-        const bubbleY = fitBox ? (options.y ?? (fitBox.y - h - 8)) : y;
+        const bubbleY = fitBox ? (options.y ?? fitBox.y - h - 8) : y;
 
         ctx.textAlign = fitBox ? "center" : "left";
         ctx.textBaseline = "middle";
@@ -3064,7 +3197,8 @@
           game.weeds.filter((w) => w.cleared).length - (game.carrying ? 1 : 0);
 
         if (game.inRiverScene) {
-          missionEl.textContent = "探索河邊空地，靠近右側樹叢中的小徑後按空白鍵可返回部落";
+          missionEl.textContent =
+            "探索河邊空地，靠近右側樹叢中的小徑後按空白鍵可返回部落";
         } else if (game.inHouse) {
           missionEl.textContent = "探索石板屋，靠近門口按空白鍵可離開";
         } else if (game.inGranary) {
@@ -3159,7 +3293,7 @@
 
       function loop() {
         if (!game.started && game.introPlaying) {
-          game.introFrame++;
+          game.introFrame += 0.25; // 減緩動畫整體播放速度（原為 ++ 即 1，現改為 0.5，速度變為原本的 50%）
           if (game.introFrame > game.introTotalFrames) {
             finishIntroSequence(false);
           }
@@ -3240,10 +3374,16 @@
         topbarEl.style.display = game.started ? "flex" : "none";
 
         if (!game.started) {
-          if (game.introPlaying) {
+          if (game.inMainMenu) {
+            drawMainMenu();
+          } else if (game.introPlaying) {
             drawOpeningAnimation();
           } else {
             drawStartScreen();
+          }
+
+          if (game.settingsOpen) {
+            drawSettingsPanel();
           }
           return;
         }
@@ -3941,6 +4081,27 @@
         const g = getStoneHouseGeometry(b);
         const { x, y, w, h, door } = g;
 
+        if (IMAGES.house) {
+          const img = IMAGES.house;
+          const sW = img.naturalWidth || 512;
+          const sH = img.naturalHeight || 512;
+          // Scale house to fit the block roughly. Adjust the width and offset as needed.
+          const tgtW = w * 1.3;
+          const tgtH = sH * (tgtW / sW);
+          ctx.drawImage(
+            img,
+            0,
+            0,
+            sW,
+            sH,
+            x - (tgtW - w) / 2,
+            y + h - tgtH,
+            tgtW,
+            tgtH,
+          );
+          return;
+        }
+
         // roof
         ctx.fillStyle = "#2f2f2f";
         ctx.beginPath();
@@ -4091,7 +4252,7 @@
           ctx.drawImage(
             IMAGES.tree,
             x - crownW * 0.56,
-            y - crownH * 1.00,
+            y - crownH * 1.0,
             44 * scale,
             52 * scale,
           );
@@ -4104,19 +4265,59 @@
 
         ctx.fillStyle = "#254626";
         ctx.beginPath();
-        ctx.ellipse(x, y - crownH * 0.34, crownW * 0.40, crownH * 0.54, 0, 0, Math.PI * 2);
+        ctx.ellipse(
+          x,
+          y - crownH * 0.34,
+          crownW * 0.4,
+          crownH * 0.54,
+          0,
+          0,
+          Math.PI * 2,
+        );
         ctx.fill();
 
         ctx.fillStyle = "#356334";
         ctx.beginPath();
-        ctx.ellipse(x - crownW * 0.18, y - crownH * 0.52, crownW * 0.28, crownH * 0.28, -0.16, 0, Math.PI * 2);
-        ctx.ellipse(x + crownW * 0.18, y - crownH * 0.50, crownW * 0.26, crownH * 0.26, 0.14, 0, Math.PI * 2);
-        ctx.ellipse(x, y - crownH * 0.76, crownW * 0.22, crownH * 0.18, 0, 0, Math.PI * 2);
+        ctx.ellipse(
+          x - crownW * 0.18,
+          y - crownH * 0.52,
+          crownW * 0.28,
+          crownH * 0.28,
+          -0.16,
+          0,
+          Math.PI * 2,
+        );
+        ctx.ellipse(
+          x + crownW * 0.18,
+          y - crownH * 0.5,
+          crownW * 0.26,
+          crownH * 0.26,
+          0.14,
+          0,
+          Math.PI * 2,
+        );
+        ctx.ellipse(
+          x,
+          y - crownH * 0.76,
+          crownW * 0.22,
+          crownH * 0.18,
+          0,
+          0,
+          Math.PI * 2,
+        );
         ctx.fill();
 
         ctx.fillStyle = "rgba(255,255,255,0.08)";
         ctx.beginPath();
-        ctx.ellipse(x - crownW * 0.12, y - crownH * 0.68, crownW * 0.14, crownH * 0.08, -0.20, 0, Math.PI * 2);
+        ctx.ellipse(
+          x - crownW * 0.12,
+          y - crownH * 0.68,
+          crownW * 0.14,
+          crownH * 0.08,
+          -0.2,
+          0,
+          Math.PI * 2,
+        );
         ctx.fill();
         ctx.restore();
       }
@@ -4141,8 +4342,8 @@
         ];
 
         const frontTrees = [
-          { x: 72, y: 244, s: 1.20 },
-          { x: 118, y: 232, s: 1.40 },
+          { x: 72, y: 244, s: 1.2 },
+          { x: 118, y: 232, s: 1.4 },
           { x: 162, y: 228, s: 1.34 },
           { x: 206, y: 236, s: 1.22 },
           { x: 246, y: 248, s: 1.12 },
@@ -4271,6 +4472,29 @@
         const x = geo.x;
         const y = geo.y;
 
+        if (IMAGES.storehouse) {
+          const img = IMAGES.storehouse;
+          const sW = img.naturalWidth || 256;
+          const sH = img.naturalHeight || 256;
+          const originalW = geo.body.w;
+          const originalH = geo.body.h;
+
+          const tgtW = originalW * 1.9; // 調整比例讓圖大一點
+          const tgtH = sH * (tgtW / sW);
+          ctx.drawImage(
+            img,
+            0,
+            0,
+            sW,
+            sH,
+            x - (tgtW - originalW) / 2,
+            y + originalH - tgtH + 60,
+            tgtW,
+            tgtH,
+          );
+          return;
+        }
+
         // 支柱
         ctx.fillStyle = "#5c4021";
         ctx.fillRect(x + 20, y + 82, 12, 52);
@@ -4360,6 +4584,103 @@
       }
 
       function drawNPC(npc, clothes, skin) {
+        // 1. 長老 elder
+        if (npc.kind === "elder" && IMAGES.elder) {
+          const img = IMAGES.elder;
+          const sW = img.naturalWidth || 128;
+          const sH = img.naturalHeight || 128;
+          let displayH = 150;
+          let displayW = sW * (displayH / sH);
+          ctx.drawImage(
+            img,
+            0,
+            0,
+            sW,
+            sH,
+            npc.x + npc.w / 2 - displayW / 2,
+            npc.y + npc.h - displayH + 6,
+            displayW,
+            displayH,
+          );
+          return;
+        }
+
+        // 2. 編織婦人 craftWoman / 河邊少女 / 屋內女族人
+        if (
+          (npc.speaker === "craftWoman" ||
+            npc.id === "riverGirl" ||
+            npc.id === "indoorFemale") &&
+          IMAGES.craftWoman
+        ) {
+          const img = IMAGES.craftWoman;
+          const sW = img.naturalWidth || 128;
+          const sH = img.naturalHeight || 128;
+          let displayH = 145;
+          let displayW = sW * (displayH / sH);
+          ctx.drawImage(
+            img,
+            0,
+            0,
+            sW,
+            sH,
+            npc.x + npc.w / 2 - displayW / 2,
+            npc.y + npc.h - displayH + 6,
+            displayW,
+            displayH,
+          );
+          return;
+        }
+
+        // 3. 部落孩子 child
+        if (npc.kind === "child" && IMAGES.child) {
+          const img = IMAGES.child;
+          const sW = img.naturalWidth || 128;
+          const sH = img.naturalHeight || 128;
+          let displayH = 110; // 小孩稍微矮一點
+          let displayW = sW * (displayH / sH);
+          ctx.drawImage(
+            img,
+            0,
+            0,
+            sW,
+            sH,
+            npc.x + npc.w / 2 - displayW / 2,
+            npc.y + npc.h - displayH + 6,
+            displayW,
+            displayH,
+          );
+          return;
+        }
+
+        // 4. 一般村民 npc_villager (避開上述的人)
+        if (
+          IMAGES.npc_villager &&
+          npc.kind !== "child" &&
+          npc.kind !== "elder" &&
+          npc.speaker !== "craftWoman" &&
+          npc.id !== "riverGirl" &&
+          npc.id !== "indoorFemale"
+        ) {
+          const img = IMAGES.npc_villager;
+          const sW = img.naturalWidth || 128;
+          const sH = img.naturalHeight || 128;
+          let displayH = 150;
+          let displayW = sW * (displayH / sH);
+          ctx.drawImage(
+            img,
+            0,
+            0,
+            sW,
+            sH,
+            npc.x + npc.w / 2 - displayW / 2,
+            npc.y + npc.h - displayH + 6,
+            displayW,
+            displayH,
+          );
+          return;
+        }
+
+        // 5. Fallback 幾何圖形 (如果圖片還沒載好或不存在)
         if (npc.kind === "child") {
           drawChildNPC(npc, clothes, skin);
           return;
@@ -4475,40 +4796,44 @@
           game.selectedGender === "female" ? "player_f" : "player_m";
         if (IMAGES[spriteKey]) {
           let frameIndex = 0;
-          const isMoving =
-            keys["ArrowLeft"] ||
-            keys["a"] ||
-            keys["ArrowRight"] ||
-            keys["d"] ||
-            keys["ArrowUp"] ||
-            keys["w"] ||
-            keys["ArrowDown"] ||
-            keys["s"];
-          if (isMoving) {
-            frameIndex = Math.floor((game.frameCount % 30) / 15) + 1; // 步伐交替
-          }
+          // 目前的圖只有1格（靜態），暫時不根據 isMoving 算動畫 frameIndex，
+          // 直接畫完整張原圖的中心
 
           const img = IMAGES[spriteKey];
-          const sW = 128;
-          const sH = 128; // 配合剛才建議的 128x128
-          const sX = frameIndex * sW;
+          // 如果影像是AI生成剛切下來單一尺寸，可以讀取 img.naturalWidth 直接縮放
+          const sW = img.naturalWidth || 128;
+          const sH = img.naturalHeight || 128;
 
           ctx.save();
           if (p.dir === "left") {
             ctx.translate(p.x + p.w / 2, p.y + p.h / 2);
             ctx.scale(-1, 1);
-            ctx.drawImage(img, sX, 0, sW, sH, -64, -96, 128, 128);
-          } else {
+            let displayH = 160;
+            let displayW = sW * (displayH / sH);
             ctx.drawImage(
               img,
-              sX,
+              0,
               0,
               sW,
               sH,
-              p.x - (128 - p.w) / 2,
-              p.y - 48,
-              128,
-              128,
+              -displayW / 2,
+              -displayH + p.h,
+              displayW,
+              displayH,
+            );
+          } else {
+            let displayH = 160;
+            let displayW = sW * (displayH / sH);
+            ctx.drawImage(
+              img,
+              0,
+              0,
+              sW,
+              sH,
+              p.x + p.w / 2 - displayW / 2,
+              p.y + p.h - displayH,
+              displayW,
+              displayH,
             );
           }
           ctx.restore();
@@ -4687,13 +5012,27 @@
         // 外層淡白光
         ctx.strokeStyle = "rgba(255,255,255,0.22)";
         ctx.lineWidth = 8;
-        roundRect(ctx, rot ? x : box.x - pad, rot ? y : box.y - pad, w, h, radius);
+        roundRect(
+          ctx,
+          rot ? x : box.x - pad,
+          rot ? y : box.y - pad,
+          w,
+          h,
+          radius,
+        );
         ctx.stroke();
 
         // 內層亮白框
         ctx.strokeStyle = "rgba(255,245,210,0.95)";
         ctx.lineWidth = 2;
-        roundRect(ctx, rot ? x : box.x - pad, rot ? y : box.y - pad, w, h, radius);
+        roundRect(
+          ctx,
+          rot ? x : box.x - pad,
+          rot ? y : box.y - pad,
+          w,
+          h,
+          radius,
+        );
         ctx.stroke();
 
         ctx.restore();
@@ -4717,7 +5056,7 @@
         const player = game.player;
 
         // 石板屋門口
-        if (!game.inHouse && isNear(player, game.houseDoorZone, 44)) {
+        if (!game.inHouse && isNear(player, game.houseDoorZone, 76)) {
           drawInteractOutline(game.houseDoorZone);
         }
 
@@ -5112,7 +5451,7 @@
 
         const drift = Math.sin(t / 55) * 26;
         drawIntroFogLayer(220 + drift, 160, 250, 68, 0.08);
-        drawIntroFogLayer(560 + drift * 0.5, 145, 320, 78, 0.10);
+        drawIntroFogLayer(560 + drift * 0.5, 145, 320, 78, 0.1);
         drawIntroFogLayer(975 - drift * 0.65, 205, 285, 82, 0.08);
 
         ctx.fillStyle = "#2b4150";
@@ -5211,7 +5550,13 @@
         }
 
         ctx.fillStyle = "#7d796f";
-        [[140, 592, 28, 16], [255, 632, 38, 20], [445, 598, 34, 18], [610, 638, 46, 24], [915, 604, 36, 19]].forEach(([x,y,w,h])=>{
+        [
+          [140, 592, 28, 16],
+          [255, 632, 38, 20],
+          [445, 598, 34, 18],
+          [610, 638, 46, 24],
+          [915, 604, 36, 19],
+        ].forEach(([x, y, w, h]) => {
           ctx.beginPath();
           ctx.ellipse(x, y, w, h, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -5233,7 +5578,7 @@
           ctx.fillRect(616, 486 + bob, 34, 12);
         }
 
-        drawIntroFogLayer(320 + Math.sin(t / 44) * 18, 238, 240, 52, 0.10);
+        drawIntroFogLayer(320 + Math.sin(t / 44) * 18, 238, 240, 52, 0.1);
         drawIntroFogLayer(865 - Math.sin(t / 47) * 14, 210, 295, 60, 0.09);
 
         ctx.restore();
@@ -5278,7 +5623,11 @@
 
         // slate houses
         const shift = Math.sin(t / 30) * 1.5;
-        [[825, 375, 108, 66], [930, 342, 94, 60], [1040, 390, 100, 62]].forEach(([x,y,w,h], idx) => {
+        [
+          [825, 375, 108, 66],
+          [930, 342, 94, 60],
+          [1040, 390, 100, 62],
+        ].forEach(([x, y, w, h], idx) => {
           ctx.fillStyle = "#4a4137";
           ctx.fillRect(x, y + 22, w, h - 18);
           ctx.fillStyle = "#6d645a";
@@ -5477,25 +5826,56 @@
           ctx.font = "bold 42px sans-serif";
           ctx.fillText("在雲豹與百步蛇守護的深山裡", canvas.width / 2, 152);
           ctx.font = "25px sans-serif";
-          if (t > 110) ctx.fillText("隱藏著古老的魯凱部落", canvas.width / 2, 208);
+          if (t > 110)
+            ctx.fillText("隱藏著古老的魯凱部落", canvas.width / 2, 208);
         } else if (t < villageStart + 20) {
           ctx.font = "bold 38px sans-serif";
-          ctx.fillText("一個失去記憶的人，循著未知的呼喚來到這裡", canvas.width / 2, 146);
+          ctx.fillText(
+            "一個失去記憶的人，循著未知的呼喚來到這裡",
+            canvas.width / 2,
+            146,
+          );
           ctx.font = "24px sans-serif";
-          if (t > 500) ctx.fillText("水流經過掌心，像記憶在甦醒前的顫動", canvas.width / 2, 202);
-          if (t > 690) ctx.fillText("他睜開眼時，山霧仍未散去", canvas.width / 2, 246);
+          if (t > 500)
+            ctx.fillText(
+              "水流經過掌心，像記憶在甦醒前的顫動",
+              canvas.width / 2,
+              202,
+            );
+          if (t > 690)
+            ctx.fillText("他睜開眼時，山霧仍未散去", canvas.width / 2, 246);
         } else if (t < fieldStart + 20) {
           ctx.font = "bold 38px sans-serif";
-          ctx.fillText("長者收留了他，帶他走過石板屋與霧中的山路", canvas.width / 2, 146);
+          ctx.fillText(
+            "長者收留了他，帶他走過石板屋與霧中的山路",
+            canvas.width / 2,
+            146,
+          );
           ctx.font = "24px sans-serif";
-          if (t > 980) ctx.fillText("他的名字還沒有回來，但土地已在等待", canvas.width / 2, 202);
-          if (t > 1160) ctx.fillText("部落靜靜看著他，也靜靜等待他的答案", canvas.width / 2, 246);
+          if (t > 980)
+            ctx.fillText(
+              "他的名字還沒有回來，但土地已在等待",
+              canvas.width / 2,
+              202,
+            );
+          if (t > 1160)
+            ctx.fillText(
+              "部落靜靜看著他，也靜靜等待他的答案",
+              canvas.width / 2,
+              246,
+            );
         } else {
           ctx.font = "bold 42px sans-serif";
-          ctx.fillText("這片未開墾的土地，是他重生的起點", canvas.width / 2, 148);
+          ctx.fillText(
+            "這片未開墾的土地，是他重生的起點",
+            canvas.width / 2,
+            148,
+          );
           ctx.font = "25px sans-serif";
-          if (t > 1480) ctx.fillText("這是一段，尋回名字的旅程", canvas.width / 2, 204);
-          if (t > 1630) ctx.fillText("而第一個回答他的，是土地與火", canvas.width / 2, 248);
+          if (t > 1480)
+            ctx.fillText("這是一段，尋回名字的旅程", canvas.width / 2, 204);
+          if (t > 1630)
+            ctx.fillText("而第一個回答他的，是土地與火", canvas.width / 2, 248);
         }
 
         ctx.font = "18px sans-serif";
@@ -5521,7 +5901,12 @@
 
       function drawStoryScenery() {
         // 左側森林入口：做成往內凹的一小段林間土路，最外側仍被樹叢封住
-        const pathShade = ctx.createLinearGradient(0, 16.2 * TILE, 0, 22.1 * TILE);
+        const pathShade = ctx.createLinearGradient(
+          0,
+          16.2 * TILE,
+          0,
+          22.1 * TILE,
+        );
         pathShade.addColorStop(0, "rgba(52, 76, 36, 0.34)");
         pathShade.addColorStop(1, "rgba(24, 36, 18, 0.18)");
         ctx.fillStyle = pathShade;
@@ -5561,7 +5946,14 @@
         ctx.fillRect(1.12 * TILE, 17.15 * TILE, 1.45 * TILE, 2.55 * TILE);
 
         // 雲豹出沒地 / 霧
-        const fog = ctx.createRadialGradient(35.5 * TILE, 9.2 * TILE, 10, 35.5 * TILE, 9.2 * TILE, 110);
+        const fog = ctx.createRadialGradient(
+          35.5 * TILE,
+          9.2 * TILE,
+          10,
+          35.5 * TILE,
+          9.2 * TILE,
+          110,
+        );
         fog.addColorStop(0, "rgba(255,255,255,0.12)");
         fog.addColorStop(1, "rgba(255,255,255,0)");
         ctx.fillStyle = fog;
@@ -5578,18 +5970,49 @@
 
       function drawOldMapLayer() {
         // 舊地圖石台獨立拉到前景層，避免被樹叢擋住
+        const mapX = 21.8 * TILE;
+        const mapY = 8.0 * TILE;
+        const mapW = 2.8 * TILE;
+        const mapH = 1.9 * TILE;
+
+        if (IMAGES.oldMap) {
+          const img = IMAGES.oldMap;
+          const sW = img.naturalWidth || 128;
+          const sH = img.naturalHeight || 128;
+          // 調整比例讓石碑大一點
+          const tgtW = mapW * 2;
+          const tgtH = sH * (tgtW / sW);
+          ctx.drawImage(
+            img,
+            0,
+            0,
+            sW,
+            sH,
+            mapX - (tgtW - mapW) / 2,
+            mapY + mapH - tgtH + 10,
+            tgtW,
+            tgtH,
+          );
+          return;
+        }
+
         ctx.fillStyle = "#74665a";
-        ctx.fillRect(28.2 * TILE, 11.7 * TILE, 2.3 * TILE, 1.1 * TILE);
-        ctx.fillRect(28.7 * TILE, 10.9 * TILE, 1.3 * TILE, 0.9 * TILE);
+        ctx.fillRect(mapX, mapY + 0.8 * TILE, 2.3 * TILE, 1.1 * TILE);
+        ctx.fillRect(mapX + 0.5 * TILE, mapY, 1.3 * TILE, 0.9 * TILE);
         ctx.fillStyle = "#d8c7a3";
-        ctx.fillRect(28.9 * TILE, 11.05 * TILE, 0.9 * TILE, 0.46 * TILE);
+        ctx.fillRect(
+          mapX + 0.7 * TILE,
+          mapY + 0.15 * TILE,
+          0.9 * TILE,
+          0.46 * TILE,
+        );
         ctx.strokeStyle = "#816e52";
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(29.0 * TILE, 11.15 * TILE);
-        ctx.lineTo(29.65 * TILE, 11.25 * TILE);
-        ctx.lineTo(29.55 * TILE, 11.38 * TILE);
-        ctx.lineTo(29.2 * TILE, 11.34 * TILE);
+        ctx.moveTo(mapX + 0.8 * TILE, mapY + 0.25 * TILE);
+        ctx.lineTo(mapX + 1.45 * TILE, mapY + 0.35 * TILE);
+        ctx.lineTo(mapX + 1.35 * TILE, mapY + 0.48 * TILE);
+        ctx.lineTo(mapX + 1.0 * TILE, mapY + 0.44 * TILE);
         ctx.stroke();
       }
 
@@ -5693,7 +6116,7 @@
 
         ctx.fillStyle = "rgba(255,255,255,0.08)";
         ctx.beginPath();
-        ctx.ellipse(174, 142, 46, 13, -0.10, 0, Math.PI * 2);
+        ctx.ellipse(174, 142, 46, 13, -0.1, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.fillStyle = "#334a33";
@@ -5714,10 +6137,16 @@
         ctx.fill();
 
         for (const [x, h, w, c] of [
-          [110, 132, 54, "#243b24"], [184, 156, 58, "#2a4328"], [286, 148, 56, "#2e482c"],
-          [408, 168, 60, "#274126"], [540, 152, 56, "#314d2f"], [672, 176, 64, "#264025"],
-          [804, 158, 58, "#2c472a"], [934, 166, 62, "#2b4428"], [1064, 150, 56, "#304d2d"],
-          [1132, 174, 64, "#244023"]
+          [110, 132, 54, "#243b24"],
+          [184, 156, 58, "#2a4328"],
+          [286, 148, 56, "#2e482c"],
+          [408, 168, 60, "#274126"],
+          [540, 152, 56, "#314d2f"],
+          [672, 176, 64, "#264025"],
+          [804, 158, 58, "#2c472a"],
+          [934, 166, 62, "#2b4428"],
+          [1064, 150, 56, "#304d2d"],
+          [1132, 174, 64, "#244023"],
         ]) {
           ctx.fillStyle = c;
           ctx.beginPath();
@@ -5744,7 +6173,12 @@
         ctx.closePath();
         ctx.fill();
 
-        const lowerGround = ctx.createLinearGradient(0, 372, 0, room.y + room.h);
+        const lowerGround = ctx.createLinearGradient(
+          0,
+          372,
+          0,
+          room.y + room.h,
+        );
         lowerGround.addColorStop(0, "#6a7a58");
         lowerGround.addColorStop(0.48, "#566a47");
         lowerGround.addColorStop(1, "#3b4e36");
@@ -5786,7 +6220,7 @@
         const river = ctx.createLinearGradient(176, 148, 1100, 704);
         river.addColorStop(0, "#255764");
         river.addColorStop(0.34, "#3c8190");
-        river.addColorStop(0.70, "#67adba");
+        river.addColorStop(0.7, "#67adba");
         river.addColorStop(1, "#97d4de");
         const riverHighlight = ctx.createLinearGradient(178, 148, 1036, 690);
         riverHighlight.addColorStop(0, "rgba(224, 247, 244, 0.48)");
@@ -5807,8 +6241,8 @@
           const nx = -(b.y - a.y);
           const ny = b.x - a.x;
           const nLen = Math.hypot(nx, ny) || 1;
-          const ox = (nx / nLen) * width * 0.10;
-          const oy = (ny / nLen) * width * 0.10;
+          const ox = (nx / nLen) * width * 0.1;
+          const oy = (ny / nLen) * width * 0.1;
 
           ctx.strokeStyle = riverBank;
           ctx.lineWidth = width + 16;
@@ -5859,22 +6293,40 @@
         ctx.fill();
         ctx.restore();
 
-        const lowerEdgeMask = ctx.createLinearGradient(0, room.y + room.h - 44, 0, room.y + room.h);
+        const lowerEdgeMask = ctx.createLinearGradient(
+          0,
+          room.y + room.h - 44,
+          0,
+          room.y + room.h,
+        );
         lowerEdgeMask.addColorStop(0, "rgba(76, 98, 66, 0)");
-        lowerEdgeMask.addColorStop(0.70, "rgba(76, 98, 66, 0.74)");
+        lowerEdgeMask.addColorStop(0.7, "rgba(76, 98, 66, 0.74)");
         lowerEdgeMask.addColorStop(1, "#3b4e36");
         ctx.fillStyle = lowerEdgeMask;
         ctx.beginPath();
         ctx.moveTo(room.x, room.y + room.h);
         ctx.lineTo(room.x, room.y + room.h - 22);
-        ctx.bezierCurveTo(210, room.y + room.h - 30, 384, room.y + room.h - 8, 572, room.y + room.h - 18);
-        ctx.bezierCurveTo(760, room.y + room.h - 30, 946, room.y + room.h - 6, room.x + room.w, room.y + room.h - 16);
+        ctx.bezierCurveTo(
+          210,
+          room.y + room.h - 30,
+          384,
+          room.y + room.h - 8,
+          572,
+          room.y + room.h - 18,
+        );
+        ctx.bezierCurveTo(
+          760,
+          room.y + room.h - 30,
+          946,
+          room.y + room.h - 6,
+          room.x + room.w,
+          room.y + room.h - 16,
+        );
         ctx.lineTo(room.x + room.w, room.y + room.h);
         ctx.closePath();
         ctx.fill();
 
         drawRiverSourceTreeCluster();
-
 
         ctx.fillStyle = "#a99974";
         ctx.beginPath();
@@ -5900,15 +6352,26 @@
           const b = riverSamples[i + 6];
           ctx.beginPath();
           ctx.moveTo(a.x - a.w * 0.06, a.y - a.w * 0.05);
-          ctx.quadraticCurveTo(m.x + m.w * 0.10, m.y - m.w * 0.16, b.x - b.w * 0.04, b.y - b.w * 0.02);
+          ctx.quadraticCurveTo(
+            m.x + m.w * 0.1,
+            m.y - m.w * 0.16,
+            b.x - b.w * 0.04,
+            b.y - b.w * 0.02,
+          );
           ctx.stroke();
         }
 
         for (const [x, y, rx, ry, rot] of [
           [408, 344, 22, 10, -0.12],
-          [254, 470, 22, 10, 0.04], [360, 506, 28, 12, -0.08], [470, 526, 22, 10, 0.10],
-          [846, 328, 16, 8, -0.10], [930, 352, 18, 9, 0.08], [1020, 402, 20, 9, -0.06],
-          [1102, 520, 24, 11, 0.12], [980, 564, 20, 10, -0.04], [884, 536, 18, 8, 0.10]
+          [254, 470, 22, 10, 0.04],
+          [360, 506, 28, 12, -0.08],
+          [470, 526, 22, 10, 0.1],
+          [846, 328, 16, 8, -0.1],
+          [930, 352, 18, 9, 0.08],
+          [1020, 402, 20, 9, -0.06],
+          [1102, 520, 24, 11, 0.12],
+          [980, 564, 20, 10, -0.04],
+          [884, 536, 18, 8, 0.1],
         ]) {
           ctx.fillStyle = "#7b746b";
           ctx.beginPath();
@@ -5930,9 +6393,17 @@
         ctx.stroke();
 
         for (const [x, y] of [
-          [332, 280], [498, 360], [610, 430],
-          [248, 452], [316, 492], [446, 528], [814, 344], [918, 378],
-          [1060, 498], [1110, 570], [928, 548]
+          [332, 280],
+          [498, 360],
+          [610, 430],
+          [248, 452],
+          [316, 492],
+          [446, 528],
+          [814, 344],
+          [918, 378],
+          [1060, 498],
+          [1110, 570],
+          [928, 548],
         ]) {
           ctx.strokeStyle = "#5f8b4d";
           ctx.lineWidth = 2;
@@ -5947,13 +6418,37 @@
         }
 
         ctx.fillStyle = "#6a6258";
-        roundRect(ctx, layout.leftRock.x, layout.leftRock.y, layout.leftRock.w, layout.leftRock.h, 20);
+        roundRect(
+          ctx,
+          layout.leftRock.x,
+          layout.leftRock.y,
+          layout.leftRock.w,
+          layout.leftRock.h,
+          20,
+        );
         ctx.fill();
-        roundRect(ctx, layout.rightRock.x, layout.rightRock.y, layout.rightRock.w, layout.rightRock.h, 20);
+        roundRect(
+          ctx,
+          layout.rightRock.x,
+          layout.rightRock.y,
+          layout.rightRock.w,
+          layout.rightRock.h,
+          20,
+        );
         ctx.fill();
         ctx.fillStyle = "rgba(255,255,255,0.08)";
-        ctx.fillRect(layout.leftRock.x + 12, layout.leftRock.y + 10, layout.leftRock.w * 0.42, 10);
-        ctx.fillRect(layout.rightRock.x + 14, layout.rightRock.y + 10, layout.rightRock.w * 0.36, 10);
+        ctx.fillRect(
+          layout.leftRock.x + 12,
+          layout.leftRock.y + 10,
+          layout.leftRock.w * 0.42,
+          10,
+        );
+        ctx.fillRect(
+          layout.rightRock.x + 14,
+          layout.rightRock.y + 10,
+          layout.rightRock.w * 0.36,
+          10,
+        );
 
         const bridgeAngle = bridge.rotation || 0;
         const bridgeCx = bridge.x + bridge.w / 2;
@@ -5994,10 +6489,17 @@
         ctx.restore();
 
         for (const [x, y, c] of [
-          [156, 286, "#436a34"], [214, 324, "#3b622d"], [1004, 214, "#416933"],
-          [1080, 220, "#3d632f"], [1152, 248, "#345928"], [1116, 392, "#436b34"],
-          [1060, 452, "#3e652f"], [896, 562, "#416a32"], [312, 548, "#466d37"],
-          [200, 532, "#3c632e"], [468, 556, "#466d37"]
+          [156, 286, "#436a34"],
+          [214, 324, "#3b622d"],
+          [1004, 214, "#416933"],
+          [1080, 220, "#3d632f"],
+          [1152, 248, "#345928"],
+          [1116, 392, "#436b34"],
+          [1060, 452, "#3e652f"],
+          [896, 562, "#416a32"],
+          [312, 548, "#466d37"],
+          [200, 532, "#3c632e"],
+          [468, 556, "#466d37"],
         ]) {
           drawBush(x, y, c);
         }
@@ -6016,9 +6518,19 @@
 
         ctx.fillStyle = "#1d281d";
         ctx.fillRect(0, 0, room.x, canvas.height);
-        ctx.fillRect(room.x + room.w, 0, canvas.width - (room.x + room.w), canvas.height);
+        ctx.fillRect(
+          room.x + room.w,
+          0,
+          canvas.width - (room.x + room.w),
+          canvas.height,
+        );
         ctx.fillRect(0, 0, canvas.width, room.y);
-        ctx.fillRect(0, room.y + room.h, canvas.width, canvas.height - (room.y + room.h));
+        ctx.fillRect(
+          0,
+          room.y + room.h,
+          canvas.width,
+          canvas.height - (room.y + room.h),
+        );
       }
 
       function drawRiverInteractionHints() {
@@ -6034,7 +6546,10 @@
           drawInteractOutline(riverSpot, 8);
         }
 
-        if (game.riverSceneExitZone && isNear(game.player, game.riverSceneExitZone, 62)) {
+        if (
+          game.riverSceneExitZone &&
+          isNear(game.player, game.riverSceneExitZone, 62)
+        ) {
           drawInteractOutline(game.riverSceneExitZone, 8);
           drawPromptBubble(
             game.riverSceneExitZone.label || "返回部落",
@@ -6048,7 +6563,7 @@
                 h: 42,
               },
               extraWidth: 20,
-            }
+            },
           );
         }
       }
@@ -6057,6 +6572,77 @@
         for (const npc of game.outdoorNPCs) {
           drawNPC(npc, npc.clothes, npc.skin);
         }
+      }
+
+      function drawMainMenu() {
+        if (IMAGES.bg) {
+          ctx.drawImage(IMAGES.bg, 0, 0, canvas.width, canvas.height);
+          // 替背景圖片加上一層半透明的深色/灰色濾鏡，使整體風格更沉穩並凸顯文字
+          ctx.fillStyle = "rgba(40, 35, 30, 0.65)";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        } else {
+          ctx.fillStyle = "#1c2a18";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Title
+        ctx.textAlign = "center";
+
+        ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
+        ctx.shadowBlur = 6;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+
+        ctx.fillStyle = "#b41c1c";
+        ctx.font = "bold 72px serif";
+        ctx.fillText("◇  負 重 榮 耀    山 田 小 米  ◇", canvas.width / 2, 160);
+
+        ctx.fillStyle = "#e6c98a";
+        ctx.font = "bold 22px sans-serif";
+        ctx.fillText(
+          "T H E   G L O R Y   O F   M I L L E T",
+          canvas.width / 2,
+          230,
+        );
+
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+
+        // Buttons
+        const menus = ["新的旅途", "記憶回溯", "圖鑑", "設定", "退出"];
+        const btnW = 280;
+        const btnH = 48;
+        const startY = 320;
+        const gap = 60;
+
+        for (let i = 0; i < menus.length; i++) {
+          const x = canvas.width / 2 - btnW / 2;
+          const y = startY + i * gap;
+
+          if (game.mainMenuSelection === i) {
+            ctx.fillStyle = "rgba(60, 25, 15, 0.9)";
+            ctx.fillRect(x, y, btnW, btnH);
+            ctx.strokeStyle = "#e6c98a";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, btnW, btnH);
+            ctx.fillStyle = "#ffffff";
+          } else {
+            ctx.fillStyle = "rgba(40, 15, 10, 0.7)";
+            ctx.fillRect(x, y, btnW, btnH);
+            ctx.fillStyle = "#d0b98c";
+          }
+
+          ctx.font = "bold 22px sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          let text = menus[i];
+          if (text.length === 2) text = text[0] + "      " + text[1];
+          else text = text.split("").join(" ");
+          ctx.fillText(text, canvas.width / 2, y + btnH / 2);
+        }
+        ctx.textBaseline = "alphabetic"; // reset baseline
       }
 
       function drawStartScreen() {
@@ -6097,11 +6683,11 @@
 
         // preview characters
         const oldPlayer = game.player;
-        game.player = { x: leftX + 25, y: y + 110, dir: "down" };
+        game.player = { x: leftX + 16, y: y + 100, w: 32, h: 32, dir: "down" };
         const oldGender = game.selectedGender;
         game.selectedGender = "male";
         drawPlayer();
-        game.player = { x: rightX + 25, y: y + 110, dir: "down" };
+        game.player = { x: rightX + 16, y: y + 100, w: 32, h: 32, dir: "down" };
         game.selectedGender = "female";
         drawPlayer();
         game.player = oldPlayer;
@@ -6130,7 +6716,13 @@
       }
 
       function drawAtmosphere() {
-        if (!game.started || game.inHouse || game.inGranary || game.inRiverScene) return;
+        if (
+          !game.started ||
+          game.inHouse ||
+          game.inGranary ||
+          game.inRiverScene
+        )
+          return;
         ctx.save();
         // 一天從早到晚的循環：每 12000 幀一圈 (約 3.3 分鐘)
         const cycle = 12000;
@@ -6165,10 +6757,18 @@
       const IMAGES = {};
       const ASSETS_TO_LOAD = {
         // 在這裡放入您的圖片素材路徑，準備好素材後即可取消註解替換
-        // 'player_m': './player_m.png',
-        // 'player_f': './player_f.png',
-        // 'tree': './tree.png',
-        // 'bush': './bush.png'
+        player_m: "./player_m.png",
+        player_f: "./player_f.png",
+        elder: "./elder.png",
+        tree: "./tree.png",
+        bush: "./bush.png",
+        house: "./house.png",
+        storehouse: "./storehouse.png",
+        npc_villager: "./npc_villager.png",
+        craftWoman: "./craftWoman.png",
+        child: "./child.png",
+        oldMap: "./oldMap.png",
+        bg: "./bg.png",
       };
 
       function loadAssets(callback) {
