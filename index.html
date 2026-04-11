@@ -505,6 +505,9 @@
         riverSceneExitZone: null,
         riverNPC: null,
         riverStorySpot: null,
+        riverElder: null,
+        riverIntroStep: 0,
+        openingAtRiver: false,
       };
 
       function startIntroSequence() {
@@ -517,11 +520,25 @@
         game.introFrame = 0;
         game.started = true;
         playBackgroundMusic();
-        setMessage(
+
+        game.inRiverScene = true;
+        game.openingAtRiver = true;
+        game.riverIntroStep = 0;
+
+        game.player.x = 34.2 * TILE;
+        game.player.y = 11.0 * TILE;
+        game.player.dir = "left";
+
+        game.riverElder.x = 31.8 * TILE;
+        game.riverElder.y = 10.8 * TILE;
+
+        setDialogue(
           skipped
-            ? `歡迎，${game.playerName}。你略過了序章，先熟悉部落，再前往田地。`
-            : `歡迎，${game.playerName}。霧中的路已經為你打開，先熟悉部落，再前往田地。`,
+            ? `……${game.playerName || "無名之人"}，你終於醒了。這裡是溪邊，別怕。`
+            : `……${game.playerName || "無名之人"}，你終於醒了。這裡是溪邊，別怕。`,
+          "elder",
         );
+
         updateUI();
       }
 
@@ -662,6 +679,18 @@
             "水會帶走聲音，卻不會帶走真正屬於你的名字。",
           ],
         };
+        game.riverElder = {
+          id: "riverElder",
+          kind: "elder",
+          name: "長老",
+          speaker: "elder",
+          x: 31.8 * TILE,
+          y: 10.8 * TILE,
+          w: 20,
+          h: 26,
+          clothes: "#1a1a1a",
+          skin: "#d0b98c",
+        };
         const riverLayout = getRiverSceneLayout();
         const bridge = riverLayout.bridge;
         game.riverStorySpot = {
@@ -779,6 +808,8 @@
           metHunter: false,
           sawLeopardSign: false,
         };
+        game.riverIntroStep = 0;
+        game.openingAtRiver = false;
         game.outdoorNPCs = [];
         game.storySpots = {};
         buildWorld();
@@ -1002,8 +1033,44 @@
       }
 
       function getNearbyRiverNPC() {
-        if (!game.inRiverScene || !game.riverNPC) return null;
+        if (!game.inRiverScene || !game.riverNPC || game.openingAtRiver) return null;
         return isNear(game.player, game.riverNPC, 60) ? game.riverNPC : null;
+      }
+
+      function getNearbyRiverElder() {
+        if (!game.inRiverScene || !game.riverElder || !game.openingAtRiver) return null;
+        return isNear(game.player, game.riverElder, 68) ? game.riverElder : null;
+      }
+
+      function talkToRiverElder() {
+        const lines = [
+          "在雲豹與百步蛇守護的深山裡，隱藏著古老的魯凱部落。",
+          "一個失去記憶的人，循著未知的呼喚來到這裡。這是一段，尋回名字的旅程。",
+          "先跟我來吧。部落會收留你，我也會帶你去看看山坡上的那片土地。",
+        ];
+
+        if (game.riverIntroStep < lines.length) {
+          setDialogue(lines[game.riverIntroStep], "elder");
+          game.riverIntroStep++;
+          return;
+        }
+
+        game.inRiverScene = false;
+        game.openingAtRiver = false;
+
+        game.player.x = 36.8 * TILE;
+        game.player.y = 15.8 * TILE;
+        game.player.dir = "right";
+
+        game.elder.x = ELDER_SPOTS.prayer.x;
+        game.elder.y = ELDER_SPOTS.prayer.y;
+
+        updateCamera();
+        setDialogue(
+          "部落的長者收留了你，並帶你來到山坡。這片未開墾的土地，是你重生的起點。",
+          "elder",
+        );
+        updateUI();
       }
 
       function getNearbyRiverSpot() {
@@ -1126,6 +1193,7 @@
 
       function leaveRiverScene() {
         game.inRiverScene = false;
+        game.openingAtRiver = false;
         game.player.x = -4.15 * TILE;
         game.player.y = 18.25 * TILE;
         game.player.dir = "right";
@@ -1678,8 +1746,12 @@
               if (rectsOverlap(box, c)) return true;
             }
             if (riverHitsPlayer(box, layout)) return true;
-            if (game.riverNPC) {
+            if (game.riverNPC && !game.openingAtRiver) {
               const hitbox = getNPCCollider(game.riverNPC);
+              if (rectsOverlap(box, hitbox)) return true;
+            }
+            if (game.riverElder && game.openingAtRiver) {
+              const hitbox = getNPCCollider(game.riverElder);
               if (rectsOverlap(box, hitbox)) return true;
             }
           }
@@ -2004,6 +2076,14 @@
         const player = game.player;
 
         if (game.inRiverScene) {
+          const riverElder = getNearbyRiverElder();
+          if (riverElder) {
+            talkToRiverElder();
+            return;
+          }
+
+          if (game.openingAtRiver) return;
+
           const riverNpc = getNearbyRiverNPC();
           if (riverNpc) {
             talkToRiverNPC(riverNpc);
@@ -3196,7 +3276,9 @@
         const deposited =
           game.weeds.filter((w) => w.cleared).length - (game.carrying ? 1 : 0);
 
-        if (game.inRiverScene) {
+        if (game.inRiverScene && game.openingAtRiver) {
+          missionEl.textContent = "任務：在河道旁與長老對話";
+        } else if (game.inRiverScene) {
           missionEl.textContent =
             "探索河邊空地，靠近右側樹叢中的小徑後按空白鍵可返回部落";
         } else if (game.inHouse) {
@@ -3390,7 +3472,10 @@
 
         if (game.inRiverScene) {
           drawRiverScene();
-          if (game.riverNPC) {
+          if (game.openingAtRiver && game.riverElder) {
+            drawNPC(game.riverElder, "#1a1a1a", "#d0b98c");
+            drawQuestIcon(game.riverElder, "!");
+          } else if (game.riverNPC) {
             drawNPC(game.riverNPC, game.riverNPC.clothes, game.riverNPC.skin);
           }
           drawRiverInteractionHints();
@@ -6536,35 +6621,42 @@
       function drawRiverInteractionHints() {
         if (!game.inRiverScene) return;
 
-        const riverNpc = getNearbyRiverNPC();
-        if (riverNpc) {
-          drawInteractOutline(riverNpc);
+        const riverElder = getNearbyRiverElder();
+        if (riverElder) {
+          drawInteractOutline(riverElder);
         }
 
-        const riverSpot = getNearbyRiverSpot();
-        if (riverSpot) {
-          drawInteractOutline(riverSpot, 8);
-        }
+        if (!game.openingAtRiver) {
+          const riverNpc = getNearbyRiverNPC();
+          if (riverNpc) {
+            drawInteractOutline(riverNpc);
+          }
 
-        if (
-          game.riverSceneExitZone &&
-          isNear(game.player, game.riverSceneExitZone, 62)
-        ) {
-          drawInteractOutline(game.riverSceneExitZone, 8);
-          drawPromptBubble(
-            game.riverSceneExitZone.label || "返回部落",
-            game.riverSceneExitZone.x + 6,
-            game.riverSceneExitZone.y - 28,
-            {
-              fitBox: {
-                x: game.riverSceneExitZone.x - 10,
-                y: game.riverSceneExitZone.y,
-                w: 62,
-                h: 42,
+          const riverSpot = getNearbyRiverSpot();
+          if (riverSpot) {
+            drawInteractOutline(riverSpot, 8);
+          }
+
+          if (
+            game.riverSceneExitZone &&
+            isNear(game.player, game.riverSceneExitZone, 62)
+          ) {
+            drawInteractOutline(game.riverSceneExitZone, 8);
+            drawPromptBubble(
+              game.riverSceneExitZone.label || "返回部落",
+              game.riverSceneExitZone.x + 6,
+              game.riverSceneExitZone.y - 28,
+              {
+                fitBox: {
+                  x: game.riverSceneExitZone.x - 10,
+                  y: game.riverSceneExitZone.y,
+                  w: 62,
+                  h: 42,
+                },
+                extraWidth: 20,
               },
-              extraWidth: 20,
-            },
-          );
+            );
+          }
         }
       }
 
