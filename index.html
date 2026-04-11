@@ -5029,10 +5029,16 @@
       function drawCarryIcon() {
         const p = game.player;
         const img = IMAGES.weed;
-        const drawX = p.x - 6;
-        const drawY = p.y - 34;
-        const drawW = 32;
-        const drawH = 32;
+        const drawW = 80;
+        const drawH = 50;
+
+        let drawX = p.x - 30;
+        let drawY = p.y - 70;
+
+        if (p.dir === "left") drawX = p.x - 26;
+        if (p.dir === "right") drawX = p.x - 18;
+        if (p.dir === "up") drawY = p.y - 76;
+        if (p.dir === "down") drawY = p.y - 76;
 
         if (img && img.complete) {
           ctx.save();
