@@ -534,28 +534,28 @@
         const stage = Math.max(1, Math.min(4, (growth || 0) + 1));
         const table = {
           小米: [
-            { w: 22, h: 26 },
-            { w: 26, h: 34 },
-            { w: 30, h: 42 },
-            { w: 34, h: 52 },
+            { w: 32, h: 36 },
+            { w: 36, h: 44 },
+            { w: 40, h: 52 },
+            { w: 44, h: 62 },
           ],
           芋頭: [
-            { w: 22, h: 22 },
-            { w: 26, h: 28 },
-            { w: 30, h: 36 },
-            { w: 36, h: 42 },
+            { w: 32, h: 32 },
+            { w: 36, h: 38 },
+            { w: 40, h: 46 },
+            { w: 46, h: 52 },
           ],
           玉米: [
-            { w: 22, h: 28 },
-            { w: 28, h: 38 },
-            { w: 34, h: 48 },
-            { w: 40, h: 60 },
+            { w: 32, h: 38 },
+            { w: 38, h: 48 },
+            { w: 44, h: 58 },
+            { w: 50, h: 70 },
           ],
           地瓜: [
-            { w: 22, h: 18 },
-            { w: 26, h: 22 },
-            { w: 30, h: 26 },
+            { w: 32, h: 28 },
             { w: 36, h: 32 },
+            { w: 40, h: 36 },
+            { w: 46, h: 42 },
           ],
         };
         return (table[cropType] || table["小米"])[stage - 1];
@@ -1008,8 +1008,8 @@
           [49, 14],
           [42, 16],
           [46, 16],
-          [43, 18],
-          [47, 18],
+          [41, 18],
+          [45, 17.5],
         ];
         const specialKinds = {
           2: "wildflower",
@@ -1077,8 +1077,8 @@
             id: "mapKeeper",
             name: "守圖人",
             speaker: "mapKeeper",
-            x: 31.2 * TILE,
-            y: 14.8 * TILE,
+            x: 26.2 * TILE,
+            y: 10.8 * TILE,
             w: 20,
             h: 26,
             clothes: "#5c4732",
@@ -1092,8 +1092,8 @@
             id: "hunter",
             name: "獵人",
             speaker: "hunter",
-            x: 35.6 * TILE,
-            y: 12.8 * TILE,
+            x: 44.6 * TILE,
+            y: 5.8 * TILE,
             w: 20,
             h: 26,
             clothes: "#3c5a33",
@@ -1572,10 +1572,10 @@
         const startY = 10.6 * TILE;
         const cols = 4;
         const rows = 3;
-        const plotW = 1.9 * TILE;
-        const plotH = 1.8 * TILE;
-        const gapX = 0.75 * TILE;
-        const gapY = 0.9 * TILE;
+        const plotW = 2.2 * TILE;
+        const plotH = 2.2 * TILE;
+        const gapX = 0.4 * TILE;
+        const gapY = 0.4 * TILE;
 
         for (let r = 0; r < rows; r++) {
           for (let c = 0; c < cols; c++) {
@@ -1594,10 +1594,10 @@
               mature: false,
               harvested: false,
               crops: [
-                { ox: 0.45, oy: 0.4, planted: false },
-                { ox: 1.15, oy: 0.4, planted: false },
-                { ox: 0.45, oy: 0.95, planted: false },
-                { ox: 1.15, oy: 0.95, planted: false },
+                { ox: 0.5, oy: 1, planted: false },
+                { ox: 1.5, oy: 1, planted: false },
+                { ox: 0.5, oy: 2, planted: false },
+                { ox: 1.5, oy: 2, planted: false },
               ],
             });
           }
@@ -2259,7 +2259,7 @@
           game.player.y = 16.8 * TILE;
           game.player.dir = "up";
           setMessage(
-            "你走進布農族糧倉。左側堆放小米束，後方吊掛玉米，右側籃中放著芋頭與地瓜，中間留有搬運通道。",
+            "你走進魯凱族糧倉。左側堆放小米束，後方吊掛玉米，右側籃中放著芋頭與地瓜，中間留有搬運通道。",
           );
           updateUI();
           return;
@@ -2277,7 +2277,7 @@
           game.player.dir = "right";
 
           updateCamera();
-          setMessage("你走出布農族糧倉，站在糧倉出入口旁。");
+          setMessage("你走出魯凱族糧倉，站在糧倉出入口旁。");
           updateUI();
           return;
         }
@@ -3208,7 +3208,7 @@
         ctx.fillStyle = "#4b3622";
         ctx.fillRect(room.x, room.y, room.w, room.h);
 
-        // 地板木台（布農族糧倉高架空間感）
+        // 地板木台（魯凱族糧倉高架空間感）
         ctx.fillStyle = "#7a5934";
         ctx.fillRect(room.x, room.y + 300, room.w, 130);
         ctx.fillStyle = "#6a4c2b";
