@@ -437,7 +437,7 @@
         landReady: false,
         landPlots: [],
         landPrepared: false,
-        cropTypes: ["小米", "玉米", "芋頭", "地瓜"],
+        cropTypes: ["小米", "芋頭", "玉米", "地瓜"],
         seedMenuOpen: false,
         seedMenuPlot: null,
         settingsOpen: false,
@@ -470,7 +470,7 @@
 
         storageZone: null,
         storedBundles: 0,
-        granaryStoredCrops: { 小米: 0, 玉米: 0, 芋頭: 0, 地瓜: 0 },
+        granaryStoredCrops: { 小米: 0, 芋頭: 0, 玉米: 0, 地瓜: 0 },
         allStored: false,
 
         houseDoorZone: null,
@@ -491,7 +491,7 @@
         isTalking: false,
         introPlaying: false,
         introFrame: 0,
-        introTotalFrames: 1800,
+        introTotalFrames: 900,
         outdoorNPCs: [],
         storySpots: {},
         storyFlags: {
@@ -509,6 +509,110 @@
         riverIntroStep: 0,
         openingAtRiver: false,
       };
+
+      const CROP_IMAGE_CONFIG = {
+        小米: { id: 1, label: "小米" },
+        芋頭: { id: 2, label: "芋頭" },
+        玉米: { id: 3, label: "玉米" },
+        地瓜: { id: 4, label: "地瓜" },
+      };
+
+      function getCropImageId(cropType) {
+        return CROP_IMAGE_CONFIG[cropType]?.id || 1;
+      }
+
+      function getCropStageAsset(cropType, growth = 0) {
+        const stage = Math.max(1, Math.min(4, (growth || 0) + 1));
+        return IMAGES[`crop_${getCropImageId(cropType)}_${stage}`] || null;
+      }
+
+      function getCropStoredAsset(cropType) {
+        return IMAGES[`crop_${getCropImageId(cropType)}_5`] || null;
+      }
+
+      function getCropStageSize(cropType, growth = 0) {
+        const stage = Math.max(1, Math.min(4, (growth || 0) + 1));
+        const table = {
+          小米: [
+            { w: 22, h: 26 },
+            { w: 26, h: 34 },
+            { w: 30, h: 42 },
+            { w: 34, h: 52 },
+          ],
+          芋頭: [
+            { w: 22, h: 22 },
+            { w: 26, h: 28 },
+            { w: 30, h: 36 },
+            { w: 36, h: 42 },
+          ],
+          玉米: [
+            { w: 22, h: 28 },
+            { w: 28, h: 38 },
+            { w: 34, h: 48 },
+            { w: 40, h: 60 },
+          ],
+          地瓜: [
+            { w: 22, h: 18 },
+            { w: 26, h: 22 },
+            { w: 30, h: 26 },
+            { w: 36, h: 32 },
+          ],
+        };
+        return (table[cropType] || table["小米"])[stage - 1];
+      }
+
+      function drawCropStageSprite(cropType, growth, px, py) {
+        const img = getCropStageAsset(cropType, growth);
+        if (!img || !img.complete) return false;
+
+        const size = getCropStageSize(cropType, growth);
+        const drawX = px - size.w / 2;
+        const drawY = py + 10 - size.h;
+        ctx.drawImage(img, drawX, drawY, size.w, size.h);
+        return true;
+      }
+
+      function drawStoredCropSprite(cropType, x, y, w, h) {
+        const img = getCropStoredAsset(cropType);
+        if (!img || !img.complete) return false;
+        ctx.drawImage(img, x, y, w, h);
+        return true;
+      }
+
+      function drawStoredCropPile(cropType, x, y, w, h, count = 1, maxCopies = 3) {
+        const img = getCropStoredAsset(cropType);
+        if (!img || !img.complete || count <= 0) return false;
+
+        const copies = Math.max(1, Math.min(maxCopies, count));
+        for (let i = 0; i < copies; i++) {
+          const offsetX = copies === 1 ? 0 : i * Math.min(24, w * 0.14);
+          const offsetY = copies === 1 ? 0 : (i % 2) * Math.min(10, h * 0.08);
+          const shrink = i * 0.08;
+          const drawW = w * (1 - shrink);
+          const drawH = h * (1 - shrink);
+          ctx.drawImage(img, x + offsetX, y + offsetY, drawW, drawH);
+        }
+        return true;
+      }
+
+      function drawHarvestCarrySprite() {
+        if (!game.carryingHarvest || !game.carryingHarvestCrop) return;
+        const p = game.player;
+        const img = getCropStoredAsset(game.carryingHarvestCrop);
+        if (!img || !img.complete) return;
+
+        const drawW = 54;
+        const drawH = 54;
+        let drawX = p.x - 18;
+        let drawY = p.y - 58;
+
+        if (p.dir === "left") drawX = p.x - 26;
+        if (p.dir === "right") drawX = p.x - 10;
+        if (p.dir === "up") drawY = p.y - 62;
+        if (p.dir === "down") drawY = p.y - 58;
+
+        ctx.drawImage(img, drawX, drawY, drawW, drawH);
+      }
 
       function startIntroSequence() {
         game.introPlaying = true;
@@ -789,7 +893,7 @@
         game.allHarvested = false;
 
         game.storedBundles = 0;
-        game.granaryStoredCrops = { 小米: 0, 玉米: 0, 芋頭: 0, 地瓜: 0 };
+        game.granaryStoredCrops = { 小米: 0, 芋頭: 0, 玉米: 0, 地瓜: 0 };
         game.allStored = false;
         game.camera = { x: 0, y: 0 };
         game.started = false;
@@ -2989,41 +3093,51 @@
       }
 
       function drawHangingCorn(x, y, count = 5) {
+        const img = getCropStoredAsset("玉米");
         for (let i = 0; i < count; i++) {
-          const cx = x + i * 28;
+          const cx = x + i * 32;
           ctx.strokeStyle = "#d8c28a";
           ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.moveTo(cx + 8, y);
-          ctx.lineTo(cx + 8, y + 16);
+          ctx.moveTo(cx + 10, y);
+          ctx.lineTo(cx + 10, y + 14);
           ctx.stroke();
 
-          ctx.fillStyle = "#d1ac42";
-          ctx.fillRect(cx + 2, y + 16, 12, 26);
-          ctx.fillStyle = "#6f9d45";
-          ctx.beginPath();
-          ctx.moveTo(cx + 2, y + 18);
-          ctx.lineTo(cx - 4, y + 28);
-          ctx.lineTo(cx + 2, y + 30);
-          ctx.closePath();
-          ctx.fill();
-          ctx.beginPath();
-          ctx.moveTo(cx + 14, y + 20);
-          ctx.lineTo(cx + 20, y + 30);
-          ctx.lineTo(cx + 14, y + 32);
-          ctx.closePath();
-          ctx.fill();
+          if (img && img.complete) {
+            ctx.drawImage(img, cx - 4, y + 12, 28, 44);
+          } else {
+            ctx.fillStyle = "#d1ac42";
+            ctx.fillRect(cx + 2, y + 16, 12, 26);
+            ctx.fillStyle = "#6f9d45";
+            ctx.beginPath();
+            ctx.moveTo(cx + 2, y + 18);
+            ctx.lineTo(cx - 4, y + 28);
+            ctx.lineTo(cx + 2, y + 30);
+            ctx.closePath();
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(cx + 14, y + 20);
+            ctx.lineTo(cx + 20, y + 30);
+            ctx.lineTo(cx + 14, y + 32);
+            ctx.closePath();
+            ctx.fill();
+          }
         }
       }
 
       function drawMilletBundles(x, y, bundles = 6, height = 76) {
+        const img = getCropStoredAsset("小米");
         for (let i = 0; i < bundles; i++) {
-          const bx = x + i * 16;
+          const bx = x + i * 18;
           const lift = (i % 2) * 6;
-          ctx.fillStyle = "#d3af4a";
-          ctx.fillRect(bx, y - height + lift, 10, height - lift);
-          ctx.fillStyle = "#8e6230";
-          ctx.fillRect(bx - 1, y - 16 + lift, 12, 4);
+          if (img && img.complete) {
+            ctx.drawImage(img, bx - 8, y - height + lift, 26, height - lift + 8);
+          } else {
+            ctx.fillStyle = "#d3af4a";
+            ctx.fillRect(bx, y - height + lift, 10, height - lift);
+            ctx.fillStyle = "#8e6230";
+            ctx.fillRect(bx - 1, y - 16 + lift, 12, 4);
+          }
         }
       }
 
@@ -3047,6 +3161,8 @@
 
         const maxVisible = 8;
         const visibleCount = Math.min(itemCount, maxVisible);
+        const usedImage = drawStoredCropPile(bin.crop, bin.x + 10, bin.y + 10, bin.w - 20, bin.h - 18, visibleCount, 3);
+        if (usedImage) return;
 
         for (let i = 0; i < visibleCount; i++) {
           const rx = bin.x + 12 + (i % 4) * 24;
@@ -3375,7 +3491,7 @@
 
       function loop() {
         if (!game.started && game.introPlaying) {
-          game.introFrame += 0.25; // 減緩動畫整體播放速度（原為 ++ 即 1，現改為 0.5，速度變為原本的 50%）
+          game.introFrame += 0.5; // 減緩動畫整體播放速度（原為 ++ 即 1，現改為 0.5，速度變為原本的 50%）
           if (game.introFrame > game.introTotalFrames) {
             finishIntroSequence(false);
           }
@@ -3541,6 +3657,7 @@
           drawCropHarvestPrompt();
           drawPlayer();
           if (game.carrying) drawCarryIcon();
+          if (game.carryingHarvest) drawHarvestCarrySprite();
 
           ctx.restore();
 
@@ -3996,6 +4113,13 @@
             for (const c of plot.crops) {
               const px = plot.x + c.ox * TILE;
               const py = plot.y + c.oy * TILE;
+
+              if (!plot.harvested) {
+                const usedCropImage = drawCropStageSprite(plot.cropType, plot.growth, px, py);
+                if (usedCropImage) {
+                  continue;
+                }
+              }
 
               if (!plot.harvested && plot.growth === 0) {
                 ctx.fillStyle = "#2e1d0f";
@@ -6892,6 +7016,12 @@
         weed: "./weed.png",
         bg: "./bg.png",
       };
+
+      Object.values(CROP_IMAGE_CONFIG).forEach((crop) => {
+        for (let stage = 1; stage <= 5; stage++) {
+          ASSETS_TO_LOAD[`crop_${crop.id}_${stage}`] = `./${crop.id}_${stage}.png`;
+        }
+      });
 
       function loadAssets(callback) {
         const keys = Object.keys(ASSETS_TO_LOAD);
