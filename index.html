@@ -329,7 +329,7 @@
 
       .save-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
         gap: 12px;
       }
 
@@ -339,35 +339,10 @@
         background: rgba(20, 14, 8, 0.58);
         padding: 14px;
         cursor: pointer;
-        min-height: 212px;
+        min-height: 178px;
         display: flex;
         flex-direction: column;
         gap: 8px;
-      }
-
-      .save-card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .save-card-slot {
-        color: #ffd27d;
-        font-size: 13px;
-        font-weight: 900;
-        letter-spacing: 0.08em;
-      }
-
-      .save-card-gender {
-        border: 1px solid rgba(230, 201, 138, 0.65);
-        border-radius: 999px;
-        padding: 3px 8px;
-        color: #fff7de;
-        background: rgba(76, 48, 25, 0.8);
-        font-size: 12px;
-        font-weight: 900;
-        white-space: nowrap;
       }
 
       .save-card.selected {
@@ -376,134 +351,11 @@
         background: rgba(72, 42, 18, 0.72);
       }
 
-      .save-card-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        color: #ffd27d;
-        font-size: 12px;
-        font-weight: 900;
-        letter-spacing: 0.08em;
-      }
-
-      .save-slot-badge {
-        border: 1px solid rgba(230, 201, 138, 0.72);
-        border-radius: 999px;
-        padding: 4px 9px;
-        background: rgba(255, 210, 125, 0.12);
-      }
-
-      .save-time-short {
-        color: #ffebb9;
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0;
-        opacity: 0.88;
-      }
-
-      .save-card-main {
-        display: grid;
-        grid-template-columns: 58px 1fr;
-        gap: 12px;
-        align-items: center;
-      }
-
-      .save-card-portrait {
-        width: 58px;
-        height: 58px;
-        border: 2px solid rgba(230, 201, 138, 0.75);
-        border-radius: 14px;
-        display: grid;
-        place-items: center;
-        background: linear-gradient(135deg, rgba(78, 52, 28, 0.95), rgba(25, 18, 12, 0.95));
-        color: #ffe4a6;
-        font-size: 30px;
-        font-weight: 900;
-        box-shadow: inset 0 -10px 18px rgba(0, 0, 0, 0.18);
-      }
-
-      .save-card-portrait.female {
-        background: linear-gradient(135deg, rgba(110, 42, 54, 0.95), rgba(40, 20, 24, 0.95));
-      }
-
-      .save-character-line {
-        color: #ffd27d;
-        font-size: 13px;
-        font-weight: 800;
-        margin-top: 3px;
-      }
-
-      .save-progress-pill {
-        width: fit-content;
-        max-width: 100%;
-        border-radius: 999px;
-        padding: 5px 9px;
-        background: rgba(255, 235, 185, 0.12);
-        color: #fff7de;
-        font-size: 12px;
-        font-weight: 800;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .save-card.empty-slot {
-        border-style: dashed;
-        background: rgba(12, 10, 8, 0.46);
-        opacity: 0.92;
-      }
-
-      .save-card-top {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-
-      .save-avatar {
-        flex: 0 0 auto;
-        width: 54px;
-        height: 54px;
-        border: 2px solid rgba(230, 201, 138, 0.72);
-        border-radius: 14px;
-        display: grid;
-        place-items: center;
-        background: rgba(255, 247, 222, 0.12);
-        color: #ffd27d;
-        font-size: 24px;
-        font-weight: 900;
-        box-shadow: inset 0 -10px 0 rgba(0, 0, 0, 0.12);
-      }
-
-      .save-card.empty-slot .save-avatar {
-        color: rgba(255, 235, 185, 0.72);
-      }
-
-      .save-slot-label {
-        color: #ffd27d;
-        font-size: 13px;
-        font-weight: 900;
-        letter-spacing: 0.08em;
-      }
-
-      .save-gender-pill {
-        display: inline-block;
-        margin-left: 6px;
-        padding: 2px 8px;
-        border: 1px solid rgba(230, 201, 138, 0.65);
-        border-radius: 999px;
-        color: #fff7de;
-        background: rgba(255, 247, 222, 0.1);
-        font-size: 12px;
-        font-weight: 900;
-      }
-
       .save-card-title {
         color: #fff7de;
         font-weight: 900;
         font-size: 18px;
         line-height: 1.35;
-        min-height: 2.7em;
         word-break: break-word;
       }
 
@@ -587,9 +439,9 @@
         <section class="save-panel" role="dialog" aria-modal="true" aria-labelledby="savePanelTitle">
           <header class="save-panel-header">
             <div>
-              <h2 id="savePanelTitle" class="save-panel-title">遊戲存檔槽</h2>
+              <h2 id="savePanelTitle" class="save-panel-title">存檔 / 記憶回溯</h2>
               <p class="save-panel-subtitle">
-                像一般遊戲一樣選擇存檔格；每格會保留角色名稱、性別、進度、背包與金錢。GitHub Pages 是靜態網站，所以新增或覆蓋後會下載 JSON 檔，之後可再上傳讀取。
+                GitHub Pages 是靜態網站，這裡會把目前進度做成 JSON 檔下載；之後上傳同一個 JSON，就能用格子檢視每筆紀錄並讀取。
               </p>
             </div>
             <button id="saveCloseBtn" class="save-ui-button secondary" type="button" aria-label="關閉存檔視窗">×</button>
@@ -597,22 +449,23 @@
 
           <div class="save-panel-body">
             <div class="save-control-row">
-              <input id="saveRecordName" type="text" maxlength="48" placeholder="輸入存檔名稱，例如：入倉前 / 播種完成" />
+              <input id="saveRecordName" type="text" maxlength="48" placeholder="輸入這筆紀錄名稱，例如：第一次入倉前" />
               <button id="saveUploadBtn" class="save-ui-button secondary" type="button">上傳存檔 JSON</button>
             </div>
 
             <div class="save-actions">
-              <button id="saveAddBtn" class="save-ui-button" type="button">存入空格並下載</button>
-              <button id="saveOverwriteBtn" class="save-ui-button" type="button">覆蓋選取格並下載</button>
-              <button id="saveDownloadBtn" class="save-ui-button secondary" type="button">下載全部存檔</button>
+              <button id="saveAddBtn" class="save-ui-button" type="button">新增目前進度並下載</button>
+              <button id="saveOverwriteBtn" class="save-ui-button" type="button">覆蓋選取紀錄並下載</button>
+              <button id="saveDeleteBtn" class="save-ui-button danger" type="button">刪除選取紀錄</button>
+              <button id="saveDownloadBtn" class="save-ui-button secondary" type="button">只下載全部紀錄</button>
             </div>
 
             <input id="saveFileInput" type="file" accept="application/json,.json" hidden />
             <div id="saveMessage" class="save-message"></div>
 
             <div class="save-grid-heading">
-              <span>存檔欄位</span>
-              <span id="saveRecordCount">0 / 6 格</span>
+              <span>紀錄格子</span>
+              <span id="saveRecordCount">0 筆紀錄</span>
             </div>
             <div id="saveRecordGrid" class="save-grid" aria-live="polite"></div>
           </div>
@@ -640,6 +493,7 @@
       const saveRecordNameInput = document.getElementById("saveRecordName");
       const saveAddBtn = document.getElementById("saveAddBtn");
       const saveOverwriteBtn = document.getElementById("saveOverwriteBtn");
+      const saveDeleteBtn = document.getElementById("saveDeleteBtn");
       const saveDownloadBtn = document.getElementById("saveDownloadBtn");
       const saveUploadBtn = document.getElementById("saveUploadBtn");
       const saveFileInput = document.getElementById("saveFileInput");
@@ -670,10 +524,19 @@
         const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
 
         if (isSaveManagerOpen()) {
-          if (k === "Escape") {
+          if ((e.ctrlKey || e.metaKey) && k === "s") {
+            e.preventDefault();
+            addCurrentSaveRecordAndDownload();
+          } else if (k === "Escape") {
             e.preventDefault();
             closeSaveManager();
           }
+          return;
+        }
+
+        if ((e.ctrlKey || e.metaKey) && k === "s") {
+          e.preventDefault();
+          openSaveManager();
           return;
         }
 
@@ -686,12 +549,6 @@
         if (game.started && (k === "b" || k === "i")) {
           e.preventDefault();
           toggleInventory();
-          return;
-        }
-
-        if ((e.ctrlKey || e.metaKey) && k === "s") {
-          e.preventDefault();
-          openSaveManager();
           return;
         }
 
@@ -1641,10 +1498,13 @@
 
 
       const SAVE_FILE_VERSION = 3;
-      const SAVE_SLOT_COUNT = 6;
+      const SAVE_APP_ID = "rukai-millet-game";
       const SAVE_STORAGE_KEY = "rukaiMilletSaveRecordsV1";
+      const SAVE_STORAGE_MIRROR_KEY = "rukaiMilletSaveRecordsV2";
       let selectedSaveRecordId = null;
-      let selectedSaveSlotNumber = null;
+      let saveRecordsMemory = [];
+      let saveRecordsHydrated = false;
+      let saveLastStorageRaw = null;
 
       function isSaveManagerOpen() {
         return !!(saveOverlayEl && saveOverlayEl.classList.contains("active"));
@@ -1664,107 +1524,43 @@
         return `save_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       }
 
-      function normalizeGender(value, fallback = "male") {
-        const text = String(value || "").trim().toLowerCase();
-        if (["female", "f", "woman", "girl", "女", "女生", "女性", "girl/female"].includes(text)) {
-          return "female";
-        }
-        if (["male", "m", "man", "boy", "男", "男生", "男性", "boy/male"].includes(text)) {
-          return "male";
-        }
-        return fallback === "female" ? "female" : "male";
+      function hasOwn(obj, key) {
+        return Object.prototype.hasOwnProperty.call(obj || {}, key);
       }
 
-      function getGenderLabel(gender) {
-        return normalizeGender(gender) === "female" ? "女生" : "男生";
+      function safeString(value, fallback = "") {
+        const text = String(value ?? "").trim();
+        return text || fallback;
       }
 
-      function getGenderAvatar(gender) {
-        return normalizeGender(gender) === "female" ? "女" : "男";
+      function safeNumber(value, fallback = 0) {
+        const n = Number(value);
+        return Number.isFinite(n) ? n : fallback;
       }
 
-      function getSnapshotGender(snapshot, fallback = "male") {
-        if (!snapshot || typeof snapshot !== "object") return normalizeGender(fallback);
-        return normalizeGender(
-          snapshot.selectedGender ||
-            snapshot.gender ||
-            snapshot.genderLabel ||
-            snapshot.characterGender ||
-            snapshot.character?.gender ||
-            snapshot.character?.genderLabel ||
-            fallback,
-          fallback,
-        );
+      function safeInteger(value, fallback = 0) {
+        const n = Math.floor(safeNumber(value, fallback));
+        return Number.isFinite(n) ? n : fallback;
       }
 
-      function getSaveRecordGender(record) {
-        if (!record || typeof record !== "object") return "male";
-        return normalizeGender(
-          record.selectedGender ||
-            record.gender ||
-            record.genderLabel ||
-            record.character?.gender ||
-            record.character?.genderLabel ||
-            getSnapshotGender(record.snapshot),
-        );
+      function safeDateMs(value) {
+        const ms = new Date(value || 0).getTime();
+        return Number.isFinite(ms) ? ms : 0;
       }
 
-      function normalizeSaveSlotNumber(value) {
-        const n = Math.floor(Number(value));
-        return Number.isFinite(n) && n >= 1 ? n : null;
+      function normalizeIsoText(value, fallback = new Date().toISOString()) {
+        const date = new Date(value || "");
+        return Number.isNaN(date.getTime()) ? fallback : date.toISOString();
       }
 
-      function getSaveSlotLabel(slotNumber) {
-        const n = normalizeSaveSlotNumber(slotNumber) || 1;
-        return `SLOT ${String(n).padStart(2, "0")}`;
-      }
-
-      function assignSaveSlots(records) {
-        const normalized = Array.isArray(records) ? records : [];
-        const used = new Set();
-
-        normalized.forEach((record) => {
-          const slotNumber = normalizeSaveSlotNumber(
-            record.slotNumber ?? record.slot ?? record.slotIndex,
-          );
-          if (slotNumber && !used.has(slotNumber)) {
-            record.slotNumber = slotNumber;
-            used.add(slotNumber);
-          } else {
-            record.slotNumber = null;
-          }
+      function clearGameplayKeys() {
+        Object.keys(keys).forEach((key) => {
+          keys[key] = false;
         });
-
-        normalized.forEach((record) => {
-          if (record.slotNumber) return;
-          let slotNumber = 1;
-          while (used.has(slotNumber)) slotNumber++;
-          record.slotNumber = slotNumber;
-          used.add(slotNumber);
-        });
-
-        return normalized;
-      }
-
-      function getNextFreeSaveSlot(records) {
-        const used = new Set(
-          normalizeSaveRecords(records)
-            .map((record) => normalizeSaveSlotNumber(record.slotNumber))
-            .filter(Boolean),
-        );
-        for (let slotNumber = 1; slotNumber <= SAVE_SLOT_COUNT; slotNumber++) {
-          if (!used.has(slotNumber)) return slotNumber;
-        }
-        return null;
-      }
-
-      function sortSaveRecordsBySlot(records) {
-        return [...normalizeSaveRecords(records)].sort((a, b) => {
-          const slotA = normalizeSaveSlotNumber(a.slotNumber) || 9999;
-          const slotB = normalizeSaveSlotNumber(b.slotNumber) || 9999;
-          if (slotA !== slotB) return slotA - slotB;
-          return new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime();
-        });
+        canPressInteract = false;
+        setTimeout(() => {
+          canPressInteract = true;
+        }, 120);
       }
 
       function getSnapshotSceneLabel(snapshot) {
@@ -1772,8 +1568,8 @@
           return snapshot && !snapshot.inMainMenu ? "角色建立" : "主選單";
         }
         if (snapshot.inRiverScene) return "河邊空地";
-        if (snapshot.inHouse) return "石板屋內";
         if (snapshot.inGranary) return "糧倉內";
+        if (snapshot.inHouse) return "石板屋內";
         return "戶外";
       }
 
@@ -1784,6 +1580,7 @@
       function describeSnapshotProgress(snapshot) {
         if (!snapshot) return "未知進度";
         if (!snapshot.started) {
+          if (snapshot.introPlaying) return "序章動畫中";
           return snapshot.inMainMenu ? "尚未開始" : "角色建立中";
         }
         if (snapshot.inRiverScene && snapshot.openingAtRiver) {
@@ -1797,7 +1594,7 @@
         }
         if (!snapshot.allCleared) {
           const total = Array.isArray(snapshot.weeds) ? snapshot.weeds.length : 0;
-          const cleared = countBy(snapshot.weeds, (w) => w.cleared);
+          const cleared = countBy(snapshot.weeds, (w) => w && w.cleared);
           return `整理 ${cleared} / ${total}`;
         }
         if (!snapshot.landReady) {
@@ -1807,21 +1604,21 @@
           const total = Array.isArray(snapshot.stoneStacks)
             ? snapshot.stoneStacks.length
             : 0;
-          const done = countBy(snapshot.stoneStacks, (s) => s.done);
+          const done = countBy(snapshot.stoneStacks, (s) => s && s.done);
           return `石牆 ${done} / ${total}`;
         }
         if (!snapshot.allSeeded) {
           const total = Array.isArray(snapshot.landPlots)
             ? snapshot.landPlots.length
             : 0;
-          const seeded = countBy(snapshot.landPlots, (p) => p.seeded);
+          const seeded = countBy(snapshot.landPlots, (p) => p && p.seeded);
           return `播種 ${seeded} / ${total}`;
         }
         if (!snapshot.scareReady) {
           const total = Array.isArray(snapshot.scareDevices)
             ? snapshot.scareDevices.length
             : 0;
-          const placed = countBy(snapshot.scareDevices, (d) => d.placed);
+          const placed = countBy(snapshot.scareDevices, (d) => d && d.placed);
           return `器具 ${placed} / ${total}`;
         }
         if (!snapshot.birdPhaseDone) return `驅鳥 ${snapshot.scareCount || 0} / 5`;
@@ -1836,10 +1633,227 @@
       }
 
       function makeDefaultSaveName(snapshot = createGameSnapshot()) {
-        const name =
-          String(snapshot?.playerName || snapshot?.character?.name || "無名之人").trim() ||
-          "無名之人";
-        return `${name}｜${getGenderLabel(getSnapshotGender(snapshot))}｜${describeSnapshotProgress(snapshot)}`;
+        const name = safeString(snapshot.playerName, "無名之人");
+        return `${name}｜${describeSnapshotProgress(snapshot)}`;
+      }
+
+      function normalizeEntity(entity, fallback = {}) {
+        const source = entity && typeof entity === "object" ? entity : {};
+        return {
+          ...fallback,
+          ...source,
+          x: safeNumber(source.x, fallback.x || 0),
+          y: safeNumber(source.y, fallback.y || 0),
+          w: safeNumber(source.w, fallback.w || 20),
+          h: safeNumber(source.h, fallback.h || 26),
+        };
+      }
+
+      function makeDefaultPlotCrops() {
+        return [
+          { ox: 0.55, oy: 0.75, planted: false },
+          { ox: 1.65, oy: 0.80, planted: false },
+          { ox: 0.60, oy: 1.75, planted: false },
+          { ox: 1.60, oy: 1.80, planted: false },
+        ];
+      }
+
+      function normalizePlotCrops(crops) {
+        const defaults = makeDefaultPlotCrops();
+        if (!Array.isArray(crops)) return defaults;
+        return defaults.map((fallback, index) => {
+          const crop = crops[index] && typeof crops[index] === "object" ? crops[index] : {};
+          return {
+            ox: safeNumber(crop.ox, fallback.ox),
+            oy: safeNumber(crop.oy, fallback.oy),
+            planted: !!crop.planted,
+          };
+        });
+      }
+
+      function normalizeLandPlot(plot, fallback = {}) {
+        const source = plot && typeof plot === "object" ? plot : {};
+        const cropType = game.cropTypes.includes(source.cropType) ? source.cropType : null;
+        return {
+          ...fallback,
+          ...source,
+          x: safeNumber(source.x, fallback.x || 0),
+          y: safeNumber(source.y, fallback.y || 0),
+          w: safeNumber(source.w, fallback.w || 2.2 * TILE),
+          h: safeNumber(source.h, fallback.h || 2.2 * TILE),
+          prepared: !!source.prepared,
+          seeded: !!source.seeded,
+          cropType,
+          growth: clamp(safeInteger(source.growth, fallback.growth || 0), 0, 3),
+          mature: !!source.mature,
+          harvested: !!source.harvested,
+          crops: normalizePlotCrops(source.crops),
+        };
+      }
+
+      function normalizeRectList(list, boolKey = null) {
+        if (!Array.isArray(list)) return [];
+        return list
+          .filter((item) => item && typeof item === "object")
+          .map((item) => {
+            const normalized = {
+              ...item,
+              x: safeNumber(item.x, 0),
+              y: safeNumber(item.y, 0),
+              w: safeNumber(item.w, TILE),
+              h: safeNumber(item.h, TILE),
+            };
+            if (boolKey) normalized[boolKey] = !!item[boolKey];
+            return normalized;
+          });
+      }
+
+      function normalizeBirdListForSave(list) {
+        if (!Array.isArray(list)) return [];
+        return list
+          .filter((bird) => bird && typeof bird === "object")
+          .map((bird) => ({
+            x: safeNumber(bird.x, 0),
+            y: safeNumber(bird.y, 0),
+            w: safeNumber(bird.w, 12),
+            h: safeNumber(bird.h, 8),
+            scared: !!bird.scared,
+            vy: safeNumber(bird.vy, 0.25),
+            targetPlotIndex: safeInteger(bird.targetPlotIndex, -1),
+          }));
+      }
+
+      function normalizeGranaryStoredCrops(value) {
+        const source = value && typeof value === "object" ? value : {};
+        return {
+          小米: Math.max(0, safeInteger(source["小米"], 0)),
+          芋頭: Math.max(0, safeInteger(source["芋頭"], 0)),
+          玉米: Math.max(0, safeInteger(source["玉米"], 0)),
+          地瓜: Math.max(0, safeInteger(source["地瓜"], 0)),
+        };
+      }
+
+      function normalizeStoryFlags(value) {
+        return {
+          metRiverGirl: !!value?.metRiverGirl,
+          readOldMap: !!value?.readOldMap,
+          metHunter: !!value?.metHunter,
+          sawLeopardSign: !!value?.sawLeopardSign,
+        };
+      }
+
+      function normalizeGameSnapshot(snapshot) {
+        const safe = clonePlain(snapshot, null);
+        if (!safe || typeof safe !== "object") return null;
+
+        const normalized = {
+          ...safe,
+          version: Math.max(SAVE_FILE_VERSION, safeInteger(safe.version, 1)),
+          capturedAt: normalizeIsoText(safe.capturedAt, new Date().toISOString()),
+          selectedGender: safe.selectedGender === "female" ? "female" : "male",
+          playerName: safeString(safe.playerName, ""),
+          currentSpeaker: safeString(safe.currentSpeaker, "system"),
+          currentTitle: safeString(safe.currentTitle, "魯凱族山田燒墾"),
+          message: String(safe.message ?? ""),
+          camera: {
+            x: safeNumber(safe.camera?.x, 0),
+            y: safeNumber(safe.camera?.y, 0),
+          },
+          inventory: normalizeInventory(safe.inventory),
+          granaryStoredCrops: normalizeGranaryStoredCrops(safe.granaryStoredCrops),
+          storyFlags: normalizeStoryFlags(safe.storyFlags),
+        };
+
+        const booleanKeys = [
+          "started",
+          "blessingDone",
+          "carrying",
+          "allCleared",
+          "burningTriggered",
+          "ashReady",
+          "landReady",
+          "landPrepared",
+          "stoneWallBuilt",
+          "scareReady",
+          "allSeeded",
+          "birdPhaseDone",
+          "growthStarted",
+          "allMature",
+          "carryingHarvest",
+          "allHarvested",
+          "allStored",
+          "isTalking",
+          "introPlaying",
+          "openingAtRiver",
+        ];
+        booleanKeys.forEach((key) => {
+          normalized[key] = !!safe[key];
+        });
+
+        normalized.inMainMenu = hasOwn(safe, "inMainMenu") ? !!safe.inMainMenu : !normalized.started;
+        normalized.inHouse = !!safe.inHouse;
+        normalized.inGranary = !!safe.inGranary;
+        normalized.inRiverScene = !!safe.inRiverScene;
+
+        if (!normalized.started) {
+          normalized.inHouse = false;
+          normalized.inGranary = false;
+          normalized.inRiverScene = false;
+          normalized.openingAtRiver = false;
+        } else {
+          normalized.inMainMenu = false;
+          if (normalized.inRiverScene) {
+            normalized.inHouse = false;
+            normalized.inGranary = false;
+          } else if (normalized.inGranary) {
+            normalized.inHouse = false;
+          }
+        }
+
+        normalized.mainMenuSelection = clamp(safeInteger(safe.mainMenuSelection, 0), 0, 4);
+        normalized.blessingStep = clamp(safeInteger(safe.blessingStep, 0), 0, 3);
+        normalized.burningProgress = Math.max(0, safeNumber(safe.burningProgress, 0));
+        normalized.riverIntroStep = clamp(safeInteger(safe.riverIntroStep, 0), 0, 3);
+        normalized.birdTimer = Math.max(0, safeNumber(safe.birdTimer, 0));
+        normalized.scareCount = clamp(safeInteger(safe.scareCount, 0), 0, 5);
+        normalized.growthProgress = Math.max(0, safeNumber(safe.growthProgress, 0));
+        normalized.growthStage = clamp(safeInteger(safe.growthStage, 0), 0, 3);
+        normalized.harvestCount = Math.max(0, safeInteger(safe.harvestCount, 0));
+        normalized.harvestTarget = Math.max(0, safeInteger(safe.harvestTarget, 0));
+        normalized.storedBundles = Math.max(0, safeInteger(safe.storedBundles, 0));
+        normalized.frameCount = Math.max(0, safeInteger(safe.frameCount, 0));
+        normalized.masterVolume = clamp(safeInteger(safe.masterVolume, 70), 0, 100);
+        normalized.gameSpeed = clamp(safeInteger(safe.gameSpeed, 100), 50, 200);
+        normalized.money = Math.max(0, safeInteger(safe.money, 0));
+        normalized.selectedInventorySlot = clamp(
+          safeInteger(safe.selectedInventorySlot, 0),
+          0,
+          INVENTORY_SIZE - 1,
+        );
+        normalized.introFrame = Math.max(0, safeNumber(safe.introFrame, 0));
+        normalized.introTotalFrames = Math.max(1, safeNumber(safe.introTotalFrames, 900));
+        normalized.carryingHarvestCrop = game.cropTypes.includes(safe.carryingHarvestCrop)
+          ? safe.carryingHarvestCrop
+          : null;
+        if (!normalized.carryingHarvestCrop) normalized.carryingHarvest = false;
+
+        normalized.player = safe.player ? normalizeEntity(safe.player, game.player || {}) : null;
+        normalized.elder = safe.elder ? normalizeEntity(safe.elder, game.elder || {}) : null;
+        normalized.riverElder = safe.riverElder
+          ? normalizeEntity(safe.riverElder, game.riverElder || {})
+          : null;
+        normalized.weeds = normalizeRectList(safe.weeds, "cleared");
+        normalized.landPlots = Array.isArray(safe.landPlots)
+          ? safe.landPlots.map((plot) => normalizeLandPlot(plot))
+          : [];
+        normalized.stoneStacks = normalizeRectList(safe.stoneStacks, "done");
+        normalized.scareDevices = normalizeRectList(safe.scareDevices, "placed").map((device) => ({
+          ...device,
+          ropeX: safeNumber(device.ropeX, device.x),
+          ropeY: safeNumber(device.ropeY, device.y),
+        }));
+        normalized.birds = normalizeBirdListForSave(safe.birds);
+        return normalized;
       }
 
       function snapshotBirds() {
@@ -1855,24 +1869,14 @@
       }
 
       function createGameSnapshot() {
-        const selectedGender = normalizeGender(game.selectedGender);
-        const playerName = String(game.playerName || "").trim() || "無名之人";
-        const genderLabel = getGenderLabel(selectedGender);
-
-        return {
+        const snapshot = {
           version: SAVE_FILE_VERSION,
           capturedAt: new Date().toISOString(),
           inMainMenu: game.inMainMenu,
+          mainMenuSelection: game.mainMenuSelection,
           started: game.started,
-          selectedGender,
-          gender: selectedGender,
-          genderLabel,
-          playerName,
-          character: {
-            name: playerName,
-            gender: selectedGender,
-            genderLabel,
-          },
+          selectedGender: game.selectedGender,
+          playerName: game.playerName,
           player: clonePlain(game.player),
           elder: clonePlain(game.elder),
           riverElder: clonePlain(game.riverElder),
@@ -1930,7 +1934,11 @@
           currentSpeaker: game.currentSpeaker,
           currentTitle: game.currentTitle,
           isTalking: game.isTalking,
+          introPlaying: game.introPlaying,
+          introFrame: game.introFrame,
+          introTotalFrames: game.introTotalFrames,
         };
+        return normalizeGameSnapshot(snapshot) || snapshot;
       }
 
       function normalizeSaveRecords(source) {
@@ -1945,84 +1953,65 @@
 
         const normalizedList = list
           .map((record) => {
-            const sourceRecord = record && typeof record === "object" ? record : {};
-            const snapshot = sourceRecord.snapshot || sourceRecord.gameSnapshot || sourceRecord.data || null;
-            const usableSnapshot = snapshot || (sourceRecord.started !== undefined ? sourceRecord : null);
-            if (!usableSnapshot || typeof usableSnapshot !== "object") return null;
-
-            const normalizedSnapshot = clonePlain(usableSnapshot, null);
+            if (!record || typeof record !== "object") return null;
+            const snapshot = record.snapshot || record.gameSnapshot || record.data || null;
+            const usableSnapshot = snapshot || (record.started !== undefined ? record : null);
+            const normalizedSnapshot = normalizeGameSnapshot(usableSnapshot);
             if (!normalizedSnapshot) return null;
 
-            const selectedGender = normalizeGender(
-              sourceRecord.selectedGender ||
-                sourceRecord.gender ||
-                sourceRecord.genderLabel ||
-                sourceRecord.character?.gender ||
-                sourceRecord.character?.genderLabel ||
-                normalizedSnapshot.selectedGender ||
-                normalizedSnapshot.gender ||
-                normalizedSnapshot.genderLabel ||
-                normalizedSnapshot.characterGender ||
-                normalizedSnapshot.character?.gender ||
-                normalizedSnapshot.character?.genderLabel ||
-                "male",
+            const savedAt = normalizeIsoText(
+              record.savedAt || record.updatedAt || normalizedSnapshot.capturedAt,
+              normalizedSnapshot.capturedAt || new Date().toISOString(),
             );
-            const playerName =
-              String(
-                sourceRecord.playerName ||
-                  normalizedSnapshot.playerName ||
-                  normalizedSnapshot.character?.name ||
-                  "無名之人",
-              ).trim() || "無名之人";
-
-            normalizedSnapshot.selectedGender = selectedGender;
-            normalizedSnapshot.gender = selectedGender;
-            normalizedSnapshot.genderLabel = getGenderLabel(selectedGender);
-            normalizedSnapshot.playerName = playerName;
-            normalizedSnapshot.character = {
-              ...(normalizedSnapshot.character || {}),
-              name: playerName,
-              gender: selectedGender,
-              genderLabel: getGenderLabel(selectedGender),
-            };
-
-            const savedAt =
-              sourceRecord.savedAt ||
-              sourceRecord.updatedAt ||
-              normalizedSnapshot.capturedAt ||
-              new Date().toISOString();
             return {
-              id: String(sourceRecord.id || createSaveId()),
-              slotNumber: normalizeSaveSlotNumber(
-                sourceRecord.slotNumber ?? sourceRecord.slot ?? sourceRecord.slotIndex,
-              ),
-              name:
-                String(sourceRecord.name || "").trim() ||
-                makeDefaultSaveName(normalizedSnapshot),
+              id: safeString(record.id, createSaveId()),
+              name: safeString(record.name, makeDefaultSaveName(normalizedSnapshot)),
               savedAt,
-              playerName,
-              selectedGender,
-              gender: selectedGender,
-              genderLabel: getGenderLabel(selectedGender),
-              character: clonePlain(normalizedSnapshot.character, {
-                name: playerName,
-                gender: selectedGender,
-                genderLabel: getGenderLabel(selectedGender),
-              }),
-              scene: sourceRecord.scene || getSnapshotSceneLabel(normalizedSnapshot),
-              progress: sourceRecord.progress || describeSnapshotProgress(normalizedSnapshot),
+              playerName: safeString(record.playerName || normalizedSnapshot.playerName, "無名之人"),
+              scene: getSnapshotSceneLabel(normalizedSnapshot),
+              progress: describeSnapshotProgress(normalizedSnapshot),
               snapshot: normalizedSnapshot,
             };
           })
           .filter(Boolean);
 
-        return assignSaveSlots(normalizedList);
+        return sortSaveRecords(dedupeSaveRecords(normalizedList));
       }
 
-      function readSaveRecords() {
+      function dedupeSaveRecords(records) {
+        const byId = new Map();
+        for (const record of records || []) {
+          if (!record || !record.id) continue;
+          const old = byId.get(record.id);
+          if (!old || safeDateMs(record.savedAt) >= safeDateMs(old.savedAt)) {
+            byId.set(record.id, record);
+          }
+        }
+        return [...byId.values()];
+      }
+
+      function sortSaveRecords(records) {
+        return [...(records || [])].sort((a, b) => safeDateMs(b.savedAt) - safeDateMs(a.savedAt));
+      }
+
+      function mergeSaveRecordLists(...lists) {
+        return sortSaveRecords(
+          dedupeSaveRecords(
+            lists.flatMap((list) => normalizeSaveRecords(list)),
+          ),
+        );
+      }
+
+      function getStoredSaveRecords() {
         try {
-          const raw = localStorage.getItem(SAVE_STORAGE_KEY);
+          const primary = localStorage.getItem(SAVE_STORAGE_KEY);
+          const mirror = localStorage.getItem(SAVE_STORAGE_MIRROR_KEY);
+          const raw = primary || mirror;
           if (!raw) return [];
+          if (raw === saveLastStorageRaw && saveRecordsHydrated) {
+            return clonePlain(saveRecordsMemory, []);
+          }
+          saveLastStorageRaw = raw;
           return normalizeSaveRecords(JSON.parse(raw));
         } catch (err) {
           console.warn("讀取本機存檔失敗：", err);
@@ -2030,58 +2019,56 @@
         }
       }
 
-      function writeSaveRecords(records) {
-        const normalizedRecords = normalizeSaveRecords(records);
+      function readSaveRecords() {
+        const stored = getStoredSaveRecords();
+        if (!saveRecordsHydrated) {
+          saveRecordsMemory = stored;
+          saveRecordsHydrated = true;
+        } else if (stored.length > 0) {
+          saveRecordsMemory = mergeSaveRecordLists(saveRecordsMemory, stored);
+        }
+        return clonePlain(saveRecordsMemory, []);
+      }
+
+      function writeSaveRecords(records, options = {}) {
+        const normalized = normalizeSaveRecords(records);
+        saveRecordsMemory = normalized;
+        saveRecordsHydrated = true;
+
+        const payload = {
+          app: SAVE_APP_ID,
+          version: SAVE_FILE_VERSION,
+          updatedAt: new Date().toISOString(),
+          records: normalized,
+        };
+        const raw = JSON.stringify(payload);
+
         try {
-          localStorage.setItem(
-            SAVE_STORAGE_KEY,
-            JSON.stringify({
-              app: "rukai-millet-game",
-              version: SAVE_FILE_VERSION,
-              updatedAt: new Date().toISOString(),
-              records: normalizedRecords,
-            }),
-          );
+          localStorage.setItem(SAVE_STORAGE_KEY, raw);
+          localStorage.setItem(SAVE_STORAGE_MIRROR_KEY, raw);
+          saveLastStorageRaw = raw;
           return true;
         } catch (err) {
           console.warn("寫入本機存檔失敗：", err);
-          showSaveMessage(
-            "瀏覽器封鎖了本機儲存，但仍會嘗試下載 JSON 檔。請保留下載檔作為紀錄。",
-          );
+          if (options.showWarning !== false) {
+            showSaveMessage(
+              "瀏覽器封鎖了本機儲存；這次紀錄仍保留在目前頁面，並會下載 JSON 檔，請務必保存下載檔。",
+            );
+          }
           return false;
         }
       }
 
-      function createCurrentSaveRecord(existingId = null, existingName = "", slotNumber = null) {
+      function createCurrentSaveRecord(existingId = null, existingName = "") {
         const snapshot = createGameSnapshot();
-        const typedName = (saveRecordNameInput?.value || "").trim();
+        const typedName = safeString(saveRecordNameInput?.value, "");
         const name = typedName || existingName || makeDefaultSaveName(snapshot);
         const savedAt = new Date().toISOString();
-        const selectedGender = getSnapshotGender(snapshot);
-        snapshot.selectedGender = selectedGender;
-        snapshot.gender = selectedGender;
-        snapshot.genderLabel = getGenderLabel(selectedGender);
-        snapshot.character = {
-          ...(snapshot.character || {}),
-          name: snapshot.playerName || "無名之人",
-          gender: selectedGender,
-          genderLabel: getGenderLabel(selectedGender),
-        };
-
         return {
           id: existingId || createSaveId(),
-          slotNumber: normalizeSaveSlotNumber(slotNumber),
           name,
           savedAt,
-          playerName: snapshot.playerName || "無名之人",
-          selectedGender,
-          gender: selectedGender,
-          genderLabel: getGenderLabel(selectedGender),
-          character: clonePlain(snapshot.character, {
-            name: snapshot.playerName || "無名之人",
-            gender: selectedGender,
-            genderLabel: getGenderLabel(selectedGender),
-          }),
+          playerName: safeString(snapshot.playerName, "無名之人"),
           scene: getSnapshotSceneLabel(snapshot),
           progress: describeSnapshotProgress(snapshot),
           snapshot,
@@ -2095,24 +2082,32 @@
       }
 
       function downloadSaveCollection(records) {
+        const normalized = normalizeSaveRecords(records);
         const payload = {
-          app: "rukai-millet-game",
+          app: SAVE_APP_ID,
           version: SAVE_FILE_VERSION,
           exportedAt: new Date().toISOString(),
-          records: normalizeSaveRecords(records),
+          records: normalized,
         };
-        const blob = new Blob([JSON.stringify(payload, null, 2)], {
-          type: "application/json;charset=utf-8",
-        });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-        a.href = url;
-        a.download = `rukai-millet-save-slots-${stamp}.json`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
+        try {
+          const blob = new Blob([JSON.stringify(payload, null, 2)], {
+            type: "application/json;charset=utf-8",
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+          a.href = url;
+          a.download = `rukai-millet-saves-${stamp}.json`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          return true;
+        } catch (err) {
+          console.warn("下載存檔失敗：", err);
+          showSaveMessage("下載失敗。請確認瀏覽器允許此頁面建立下載檔。");
+          return false;
+        }
       }
 
       function showSaveMessage(text) {
@@ -2121,187 +2116,52 @@
       }
 
       function setSelectedSaveRecord(id) {
-        selectedSaveRecordId = id;
         const record = readSaveRecords().find((r) => r.id === id);
-        selectedSaveSlotNumber = record ? record.slotNumber : null;
+        selectedSaveRecordId = record ? record.id : null;
         if (record && saveRecordNameInput) {
           saveRecordNameInput.value = record.name;
         }
         refreshSaveRecordGrid();
       }
 
-      function setSelectedEmptySaveSlot(slotNumber) {
-        selectedSaveRecordId = null;
-        selectedSaveSlotNumber = normalizeSaveSlotNumber(slotNumber);
-        if (saveRecordNameInput) {
-          saveRecordNameInput.value = makeDefaultSaveName(createGameSnapshot());
-        }
-        refreshSaveRecordGrid();
-      }
-
-      function createSaveCardHeader(slotNumber, savedAt = "") {
-        const header = document.createElement("div");
-        header.className = "save-card-header";
-
-        const slotBadge = document.createElement("div");
-        slotBadge.className = "save-slot-badge";
-        slotBadge.textContent = getSaveSlotLabel(slotNumber);
-
-        const timeShort = document.createElement("div");
-        timeShort.className = "save-time-short";
-        timeShort.textContent = savedAt ? formatSaveTime(savedAt) : "EMPTY";
-
-        header.appendChild(slotBadge);
-        header.appendChild(timeShort);
-        return header;
-      }
-
       function refreshSaveRecordGrid(records = readSaveRecords()) {
         if (!saveRecordGridEl) return;
-
-        const sortedRecords = sortSaveRecordsBySlot(records);
-        const maxSlotNumber = Math.max(
-          SAVE_SLOT_COUNT,
-          ...sortedRecords.map((record) => normalizeSaveSlotNumber(record.slotNumber) || 0),
-        );
-        const recordsBySlot = new Map(
-          sortedRecords.map((record) => [normalizeSaveSlotNumber(record.slotNumber), record]),
-        );
-
+        const sorted = normalizeSaveRecords(records);
+        if (selectedSaveRecordId && !sorted.some((record) => record.id === selectedSaveRecordId)) {
+          selectedSaveRecordId = null;
+        }
         if (saveRecordCountEl) {
-          saveRecordCountEl.textContent = `${sortedRecords.length} / ${maxSlotNumber} 格`;
+          saveRecordCountEl.textContent = `${sorted.length} 筆紀錄`;
         }
         saveRecordGridEl.innerHTML = "";
 
-        for (let slotNumber = 1; slotNumber <= maxSlotNumber; slotNumber++) {
-          const record = recordsBySlot.get(slotNumber);
+        if (sorted.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "save-empty";
+          empty.textContent = "目前沒有紀錄。可以先新增目前進度，或上傳之前下載的 JSON 存檔。";
+          saveRecordGridEl.appendChild(empty);
+          return;
+        }
 
-          if (!record) {
-            const emptyCard = document.createElement("article");
-            emptyCard.className =
-              "save-card empty-slot" +
-              (!selectedSaveRecordId && selectedSaveSlotNumber === slotNumber ? " selected" : "");
-            emptyCard.tabIndex = 0;
-            emptyCard.setAttribute("aria-label", `${getSaveSlotLabel(slotNumber)}，空的存檔格`);
-
-            emptyCard.appendChild(createSaveCardHeader(slotNumber));
-
-            const main = document.createElement("div");
-            main.className = "save-card-main";
-
-            const portrait = document.createElement("div");
-            portrait.className = "save-card-portrait empty";
-            portrait.textContent = "+";
-
-            const info = document.createElement("div");
-            const title = document.createElement("div");
-            title.className = "save-card-title";
-            title.textContent = "空的存檔";
-            const characterLine = document.createElement("div");
-            characterLine.className = "save-character-line";
-            characterLine.textContent = "可存入目前角色進度";
-            info.appendChild(title);
-            info.appendChild(characterLine);
-            main.appendChild(portrait);
-            main.appendChild(info);
-
-            const meta = document.createElement("div");
-            meta.className = "save-card-meta";
-            [
-              "這一格尚未使用。",
-              "選取後按上方「存入空格並下載」，或直接按下方按鈕。",
-            ].forEach((line) => {
-              const div = document.createElement("div");
-              div.textContent = line;
-              meta.appendChild(div);
-            });
-
-            const actions = document.createElement("div");
-            actions.className = "save-card-actions";
-
-            const selectBtn = document.createElement("button");
-            selectBtn.type = "button";
-            selectBtn.textContent = "選取空格";
-            selectBtn.addEventListener("click", (ev) => {
-              ev.stopPropagation();
-              setSelectedEmptySaveSlot(slotNumber);
-              showSaveMessage(`已選取 ${getSaveSlotLabel(slotNumber)}，可以把目前進度存入這格。`);
-            });
-
-            const saveBtn = document.createElement("button");
-            saveBtn.type = "button";
-            saveBtn.textContent = "存入此格";
-            saveBtn.addEventListener("click", (ev) => {
-              ev.stopPropagation();
-              setSelectedEmptySaveSlot(slotNumber);
-              addCurrentSaveRecordAndDownload();
-            });
-
-            actions.appendChild(selectBtn);
-            actions.appendChild(saveBtn);
-            emptyCard.appendChild(main);
-            emptyCard.appendChild(meta);
-            emptyCard.appendChild(actions);
-
-            emptyCard.addEventListener("click", () => {
-              setSelectedEmptySaveSlot(slotNumber);
-              showSaveMessage(`已選取 ${getSaveSlotLabel(slotNumber)}，可以把目前進度存入這格。`);
-            });
-            emptyCard.addEventListener("keydown", (ev) => {
-              if (ev.key === "Enter" || ev.key === " ") {
-                ev.preventDefault();
-                setSelectedEmptySaveSlot(slotNumber);
-                showSaveMessage(`已選取 ${getSaveSlotLabel(slotNumber)}，可以把目前進度存入這格。`);
-              }
-            });
-
-            saveRecordGridEl.appendChild(emptyCard);
-            continue;
-          }
-
-          const gender = getSaveRecordGender(record);
-          const genderLabel = getGenderLabel(gender);
-          const progress = record.progress || describeSnapshotProgress(record.snapshot);
-          const scene = record.scene || getSnapshotSceneLabel(record.snapshot);
-
+        sorted.forEach((record) => {
           const card = document.createElement("article");
           card.className = "save-card" + (record.id === selectedSaveRecordId ? " selected" : "");
           card.tabIndex = 0;
-          card.setAttribute("aria-label", `${getSaveSlotLabel(slotNumber)}，${record.playerName || "無名之人"}，${genderLabel}`);
-
-          const main = document.createElement("div");
-          main.className = "save-card-main";
-
-          const portrait = document.createElement("div");
-          portrait.className = `save-card-portrait ${gender}`;
-          portrait.textContent = getGenderAvatar(gender);
-
-          const info = document.createElement("div");
 
           const title = document.createElement("div");
           title.className = "save-card-title";
           title.textContent = record.name;
 
-          const characterLine = document.createElement("div");
-          characterLine.className = "save-character-line";
-          characterLine.textContent = `${record.playerName || "無名之人"}｜性別：${genderLabel}`;
-
-          info.appendChild(title);
-          info.appendChild(characterLine);
-          main.appendChild(portrait);
-          main.appendChild(info);
-
-          const progressPill = document.createElement("div");
-          progressPill.className = "save-progress-pill";
-          progressPill.textContent = progress;
-
           const meta = document.createElement("div");
           meta.className = "save-card-meta";
-          [
-            `場景：${scene}`,
+          const metaLines = [
+            `角色：${record.playerName || "無名之人"}`,
+            `場景：${record.scene || getSnapshotSceneLabel(record.snapshot)}`,
+            `進度：${record.progress || describeSnapshotProgress(record.snapshot)}`,
             getInventorySummary(record.snapshot?.inventory, record.snapshot?.money),
-            `最後存檔：${formatSaveTime(record.savedAt)}`,
-          ].forEach((line) => {
+            `時間：${formatSaveTime(record.savedAt)}`,
+          ];
+          metaLines.forEach((line) => {
             const div = document.createElement("div");
             div.textContent = line;
             meta.appendChild(div);
@@ -2312,11 +2172,11 @@
 
           const selectBtn = document.createElement("button");
           selectBtn.type = "button";
-          selectBtn.textContent = "選取此格";
+          selectBtn.textContent = "選取";
           selectBtn.addEventListener("click", (ev) => {
             ev.stopPropagation();
             setSelectedSaveRecord(record.id);
-            showSaveMessage(`已選取 ${getSaveSlotLabel(slotNumber)}「${record.name}」，可用覆蓋按鈕更新這一格。`);
+            showSaveMessage(`已選取「${record.name}」，可用覆蓋按鈕更新這一格。`);
           });
 
           const loadBtn = document.createElement("button");
@@ -2327,95 +2187,120 @@
             loadSaveRecord(record.id);
           });
 
+          const deleteBtn = document.createElement("button");
+          deleteBtn.type = "button";
+          deleteBtn.textContent = "刪除";
+          deleteBtn.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            selectedSaveRecordId = record.id;
+            deleteSelectedSaveRecord();
+          });
+
           actions.appendChild(selectBtn);
           actions.appendChild(loadBtn);
-          card.appendChild(createSaveCardHeader(slotNumber, record.savedAt));
-          card.appendChild(main);
-          card.appendChild(progressPill);
+          actions.appendChild(deleteBtn);
+          card.appendChild(title);
           card.appendChild(meta);
           card.appendChild(actions);
 
           card.addEventListener("click", () => {
             setSelectedSaveRecord(record.id);
-            showSaveMessage(`已選取 ${getSaveSlotLabel(slotNumber)}「${record.name}」，可用覆蓋按鈕更新這一格。`);
+            showSaveMessage(`已選取「${record.name}」，可用覆蓋按鈕更新這一格。`);
           });
           card.addEventListener("keydown", (ev) => {
             if (ev.key === "Enter" || ev.key === " ") {
               ev.preventDefault();
               setSelectedSaveRecord(record.id);
-              showSaveMessage(`已選取 ${getSaveSlotLabel(slotNumber)}「${record.name}」，可用覆蓋按鈕更新這一格。`);
+              showSaveMessage(`已選取「${record.name}」，可用覆蓋按鈕更新這一格。`);
             }
           });
 
           saveRecordGridEl.appendChild(card);
-        }
+        });
       }
 
       function addCurrentSaveRecordAndDownload() {
         const records = readSaveRecords();
-        const targetSlot =
-          !selectedSaveRecordId && selectedSaveSlotNumber
-            ? selectedSaveSlotNumber
-            : getNextFreeSaveSlot(records);
-
-        if (!targetSlot) {
-          showSaveMessage(`前 ${SAVE_SLOT_COUNT} 個存檔格都已使用。請先選取一格，再用「覆蓋選取格並下載」。`);
-          return;
-        }
-
-        const record = createCurrentSaveRecord(null, "", targetSlot);
-        const normalizedRecords = normalizeSaveRecords([...records, record]);
-        writeSaveRecords(normalizedRecords);
+        const record = createCurrentSaveRecord();
+        const nextRecords = mergeSaveRecordLists([record], records);
+        const stored = writeSaveRecords(nextRecords, { showWarning: false });
         selectedSaveRecordId = record.id;
-        selectedSaveSlotNumber = targetSlot;
-        downloadSaveCollection(normalizedRecords);
-        refreshSaveRecordGrid(normalizedRecords);
-        showSaveMessage(`已存入 ${getSaveSlotLabel(targetSlot)}「${record.name}」，並下載包含全部存檔的 JSON 檔。`);
+        const downloaded = downloadSaveCollection(nextRecords);
+        refreshSaveRecordGrid(nextRecords);
+        if (saveRecordNameInput) saveRecordNameInput.value = record.name;
+        showSaveMessage(
+          stored
+            ? `已新增「${record.name}」，並下載包含全部紀錄的 JSON 檔。`
+            : downloaded
+              ? `已新增「${record.name}」並下載 JSON；但本機暫存被瀏覽器封鎖，請保留下載檔。`
+              : `已新增「${record.name}」，但下載失敗；請再按一次「只下載全部紀錄」。`,
+        );
       }
 
       function overwriteSelectedSaveRecordAndDownload() {
         const records = readSaveRecords();
-
-        if (!selectedSaveRecordId && selectedSaveSlotNumber) {
-          const targetSlot = selectedSaveSlotNumber;
-          const record = createCurrentSaveRecord(null, "", targetSlot);
-          const normalizedRecords = normalizeSaveRecords([...records, record]);
-          writeSaveRecords(normalizedRecords);
-          selectedSaveRecordId = record.id;
-          downloadSaveCollection(normalizedRecords);
-          refreshSaveRecordGrid(normalizedRecords);
-          showSaveMessage(`已存入 ${getSaveSlotLabel(targetSlot)}「${record.name}」，並下載更新後的 JSON 檔。`);
-          return;
-        }
-
         if (!selectedSaveRecordId) {
-          showSaveMessage("請先在下方選取要覆蓋的存檔格；若有空格，也可以直接選取空格後存入。 ");
+          showSaveMessage("請先在下方格子選取要覆蓋的紀錄。也可以改用新增目前進度。");
           return;
         }
         const index = records.findIndex((record) => record.id === selectedSaveRecordId);
         if (index === -1) {
-          showSaveMessage("找不到剛才選取的存檔格，請重新選取。 ");
+          selectedSaveRecordId = null;
+          refreshSaveRecordGrid(records);
+          showSaveMessage("找不到剛才選取的紀錄，請重新選取一格。");
           return;
         }
-        const targetSlot = records[index].slotNumber || selectedSaveSlotNumber || 1;
-        const record = createCurrentSaveRecord(records[index].id, records[index].name, targetSlot);
+        const record = createCurrentSaveRecord(records[index].id, records[index].name);
         records[index] = record;
-        const normalizedRecords = normalizeSaveRecords(records);
-        writeSaveRecords(normalizedRecords);
-        selectedSaveSlotNumber = targetSlot;
-        downloadSaveCollection(normalizedRecords);
-        refreshSaveRecordGrid(normalizedRecords);
-        showSaveMessage(`已覆蓋 ${getSaveSlotLabel(targetSlot)}「${record.name}」，並下載更新後的 JSON 檔。`);
+        const nextRecords = normalizeSaveRecords(records);
+        const stored = writeSaveRecords(nextRecords, { showWarning: false });
+        const downloaded = downloadSaveCollection(nextRecords);
+        refreshSaveRecordGrid(nextRecords);
+        if (saveRecordNameInput) saveRecordNameInput.value = record.name;
+        showSaveMessage(
+          stored
+            ? `已覆蓋「${record.name}」，並下載更新後的 JSON 檔。`
+            : downloaded
+              ? `已覆蓋「${record.name}」並下載 JSON；但本機暫存被瀏覽器封鎖，請保留下載檔。`
+              : `已覆蓋「${record.name}」，但下載失敗；請再按一次「只下載全部紀錄」。`,
+        );
+      }
+
+      function deleteSelectedSaveRecord() {
+        const records = readSaveRecords();
+        if (!selectedSaveRecordId) {
+          showSaveMessage("請先選取要刪除的紀錄。");
+          return;
+        }
+        const record = records.find((item) => item.id === selectedSaveRecordId);
+        if (!record) {
+          selectedSaveRecordId = null;
+          refreshSaveRecordGrid(records);
+          showSaveMessage("找不到剛才選取的紀錄，請重新選取一格。");
+          return;
+        }
+        const ok = confirm(`確定要刪除「${record.name}」嗎？建議刪除前先下載全部紀錄。`);
+        if (!ok) return;
+        const nextRecords = records.filter((item) => item.id !== selectedSaveRecordId);
+        selectedSaveRecordId = null;
+        const stored = writeSaveRecords(nextRecords, { showWarning: false });
+        refreshSaveRecordGrid(nextRecords);
+        showSaveMessage(
+          stored
+            ? `已刪除「${record.name}」。建議按「只下載全部紀錄」更新備份 JSON。`
+            : `已在目前頁面刪除「${record.name}」；但本機暫存被封鎖，請下載全部紀錄保存最新狀態。`,
+        );
       }
 
       function downloadAllSaveRecords() {
         const records = readSaveRecords();
         if (records.length === 0) {
-          showSaveMessage("目前沒有任何紀錄可以下載。\u00a0");
+          showSaveMessage("目前沒有任何紀錄可以下載。");
           return;
         }
-        downloadSaveCollection(records);
-        showSaveMessage(`已下載 ${records.length} 筆存檔。`);
+        if (downloadSaveCollection(records)) {
+          showSaveMessage(`已下載 ${records.length} 筆紀錄。`);
+        }
       }
 
       function importSaveRecordsFromFile(file) {
@@ -2423,90 +2308,91 @@
         const reader = new FileReader();
         reader.onload = () => {
           try {
-            const imported = normalizeSaveRecords(JSON.parse(String(reader.result || "{}")));
+            const parsed = JSON.parse(String(reader.result || "{}"));
+            const imported = normalizeSaveRecords(parsed);
             if (imported.length === 0) {
-              showSaveMessage("這個檔案沒有可讀取的存檔。 ");
+              showSaveMessage("這個檔案沒有可讀取的存檔紀錄。");
               return;
             }
 
             const existing = readSaveRecords();
-            const byId = new Map(existing.map((record) => [record.id, record]));
+            const existingIds = new Set(existing.map((record) => record.id));
             let added = 0;
             let updated = 0;
-
             imported.forEach((record) => {
-              if (!record.id) record.id = createSaveId();
-              if (byId.has(record.id)) updated++;
+              if (existingIds.has(record.id)) updated++;
               else added++;
-              byId.set(record.id, record);
             });
 
-            const merged = sortSaveRecordsBySlot([...byId.values()]);
-            writeSaveRecords(merged);
+            const merged = mergeSaveRecordLists(imported, existing);
+            const stored = writeSaveRecords(merged, { showWarning: false });
             selectedSaveRecordId = imported[0].id;
-            const selectedRecord = merged.find((record) => record.id === selectedSaveRecordId);
-            selectedSaveSlotNumber = selectedRecord?.slotNumber || null;
+            if (saveRecordNameInput) saveRecordNameInput.value = imported[0].name;
             refreshSaveRecordGrid(merged);
             showSaveMessage(
-              `上傳完成：新增 ${added} 格、更新 ${updated} 格。性別、背包、金錢與進度都會顯示在各存檔格。`,
+              stored
+                ? `上傳完成：新增 ${added} 筆、更新 ${updated} 筆。每筆紀錄已顯示在下方格子中。`
+                : `上傳完成：新增 ${added} 筆、更新 ${updated} 筆；但本機暫存被封鎖，請用「只下載全部紀錄」保留整合後 JSON。`,
             );
           } catch (err) {
             console.warn("匯入存檔失敗：", err);
-            showSaveMessage("讀取失敗，請確認上傳的是本遊戲下載的 JSON 存檔。 ");
+            showSaveMessage("讀取失敗，請確認上傳的是本遊戲下載的 JSON 存檔。");
           } finally {
             if (saveFileInput) saveFileInput.value = "";
           }
+        };
+        reader.onerror = () => {
+          showSaveMessage("讀取檔案失敗，請重新選擇 JSON 存檔。");
+          if (saveFileInput) saveFileInput.value = "";
         };
         reader.readAsText(file, "utf-8");
       }
 
       function restoreBirds(savedBirds) {
         if (!Array.isArray(savedBirds)) return [];
-        return savedBirds.map((bird) => {
-          const target = game.landPlots[bird.targetPlotIndex] || game.landPlots.find((p) => p.seeded) || null;
-          return {
-            x: bird.x || 0,
-            y: bird.y || 0,
-            w: bird.w || 12,
-            h: bird.h || 8,
-            scared: !!bird.scared,
-            vy: bird.vy || 0.25,
-            target,
-          };
-        }).filter((bird) => !!bird.target || bird.scared);
+        return savedBirds
+          .map((bird) => {
+            const targetIndex = safeInteger(bird.targetPlotIndex, -1);
+            const target = game.landPlots[targetIndex] || game.landPlots.find((p) => p.seeded) || null;
+            return {
+              x: safeNumber(bird.x, 0),
+              y: safeNumber(bird.y, 0),
+              w: safeNumber(bird.w, 12),
+              h: safeNumber(bird.h, 8),
+              scared: !!bird.scared,
+              vy: safeNumber(bird.vy, 0.25),
+              target,
+            };
+          })
+          .filter((bird) => !!bird.target || bird.scared);
       }
 
       function assignIfPresent(snapshot, key) {
-        if (Object.prototype.hasOwnProperty.call(snapshot, key)) {
+        if (hasOwn(snapshot, key)) {
           game[key] = snapshot[key];
         }
       }
 
+      function ensureDefaultStoneStacksWithoutLosingPlots() {
+        if (!game.landReady || game.stoneStacks.length > 0) return;
+        const savedPlots = clonePlain(game.landPlots, []);
+        setupLandPlots();
+        if (savedPlots.length > 0) game.landPlots = savedPlots;
+      }
+
       function applyGameSnapshot(snapshot) {
-        const safe = clonePlain(snapshot, null);
-        if (!safe || typeof safe !== "object") {
-          showSaveMessage("這筆紀錄沒有可讀取的遊戲資料。 ");
+        const safe = normalizeGameSnapshot(snapshot);
+        if (!safe) {
+          showSaveMessage("這筆紀錄沒有可讀取的遊戲資料。");
           return false;
         }
-
-        safe.selectedGender = getSnapshotGender(safe, game.selectedGender || "male");
-        safe.gender = safe.selectedGender;
-        safe.genderLabel = getGenderLabel(safe.selectedGender);
-        safe.playerName =
-          String(safe.playerName || safe.character?.name || "無名之人").trim() ||
-          "無名之人";
-        safe.character = {
-          ...(safe.character || {}),
-          name: safe.playerName,
-          gender: safe.selectedGender,
-          genderLabel: safe.genderLabel,
-        };
 
         init();
         stopIndoorSong();
 
         const scalarKeys = [
           "inMainMenu",
+          "mainMenuSelection",
           "started",
           "selectedGender",
           "playerName",
@@ -2550,41 +2436,40 @@
           "currentSpeaker",
           "currentTitle",
           "isTalking",
+          "introPlaying",
+          "introFrame",
+          "introTotalFrames",
         ];
         scalarKeys.forEach((key) => assignIfPresent(safe, key));
-        game.selectedGender = normalizeGender(game.selectedGender);
-        game.playerName = String(game.playerName || safe.character?.name || "無名之人").trim() || "無名之人";
 
-        if (safe.player) game.player = { ...game.player, ...safe.player };
-        if (safe.elder) game.elder = { ...game.elder, ...safe.elder };
+        if (safe.player) game.player = normalizeEntity(safe.player, game.player);
+        if (safe.elder) game.elder = normalizeEntity(safe.elder, game.elder);
         if (safe.riverElder && game.riverElder) {
-          game.riverElder = { ...game.riverElder, ...safe.riverElder };
+          game.riverElder = normalizeEntity(safe.riverElder, game.riverElder);
         }
-        if (Array.isArray(safe.weeds)) game.weeds = safe.weeds;
-        if (Array.isArray(safe.landPlots)) game.landPlots = safe.landPlots;
-        if (Array.isArray(safe.stoneStacks)) game.stoneStacks = safe.stoneStacks;
-        if (Array.isArray(safe.scareDevices)) game.scareDevices = safe.scareDevices;
-        if (safe.granaryStoredCrops) {
-          game.granaryStoredCrops = {
-            小米: 0,
-            芋頭: 0,
-            玉米: 0,
-            地瓜: 0,
-            ...safe.granaryStoredCrops,
-          };
-        }
-        if (Array.isArray(safe.inventory)) {
-          game.inventory = normalizeInventory(safe.inventory);
-        } else {
-          game.inventory = normalizeInventory(game.inventory);
-        }
-        game.money = Math.max(0, Math.floor(Number(game.money) || 0));
-        if (safe.storyFlags) game.storyFlags = { ...game.storyFlags, ...safe.storyFlags };
-        if (safe.camera) game.camera = { ...game.camera, ...safe.camera };
+        game.weeds = normalizeRectList(safe.weeds, "cleared");
+        game.landPlots = Array.isArray(safe.landPlots)
+          ? safe.landPlots.map((plot) => normalizeLandPlot(plot))
+          : [];
+        game.stoneStacks = normalizeRectList(safe.stoneStacks, "done");
+        game.scareDevices = normalizeRectList(safe.scareDevices, "placed").map((device) => ({
+          ...device,
+          ropeX: safeNumber(device.ropeX, device.x),
+          ropeY: safeNumber(device.ropeY, device.y),
+        }));
+        game.granaryStoredCrops = normalizeGranaryStoredCrops(safe.granaryStoredCrops);
+        game.inventory = normalizeInventory(safe.inventory);
+        game.money = Math.max(0, safeInteger(safe.money, 0));
+        game.storyFlags = { ...game.storyFlags, ...normalizeStoryFlags(safe.storyFlags) };
+        game.camera = {
+          x: safeNumber(safe.camera?.x, 0),
+          y: safeNumber(safe.camera?.y, 0),
+        };
 
         if (game.landReady && game.landPlots.length === 0) {
           setupLandPlots();
         }
+        ensureDefaultStoneStacksWithoutLosingPlots();
         if (game.allSeeded && game.scareDevices.length === 0) {
           setupScareDevices();
         }
@@ -2596,47 +2481,64 @@
         game.settingsOpen = false;
         game.selectedSettingRow = 0;
         game.currentIndoorAudio = null;
-        if (game.started) game.inMainMenu = false;
 
+        if (!game.started) {
+          game.inHouse = false;
+          game.inGranary = false;
+          game.inRiverScene = false;
+          game.openingAtRiver = false;
+        } else {
+          game.inMainMenu = false;
+          if (game.inRiverScene) {
+            game.inHouse = false;
+            game.inGranary = false;
+          } else if (game.inGranary) {
+            game.inHouse = false;
+          }
+        }
+
+        ensureInventoryReady();
         applyAudioSettings();
         updateCamera();
         updateUI();
         refreshDialogueUI();
+        clearGameplayKeys();
         return true;
       }
 
       function loadSaveRecord(recordId) {
         const record = readSaveRecords().find((item) => item.id === recordId);
         if (!record) {
-          showSaveMessage("找不到這筆紀錄。\u00a0");
+          showSaveMessage("找不到這筆紀錄。");
           return;
         }
         const ok = applyGameSnapshot(record.snapshot);
         if (!ok) return;
         selectedSaveRecordId = record.id;
-        selectedSaveSlotNumber = record.slotNumber || null;
         closeSaveManager();
         if (game.started) {
-          setMessage(`已讀取 ${getSaveSlotLabel(record.slotNumber || 1)}「${record.name}」（性別：${getGenderLabel(getSaveRecordGender(record))}）。`);
+          setMessage(`已讀取存檔「${record.name}」。`);
           resumeBackgroundMusic();
+        } else {
+          updateUI();
+          refreshDialogueUI();
         }
       }
 
       function openSaveManager() {
         if (!saveOverlayEl) return;
         game.inventoryOpen = false;
+        game.settingsOpen = false;
         const currentSnapshot = createGameSnapshot();
         selectedSaveRecordId = null;
-        selectedSaveSlotNumber = null;
         if (saveRecordNameInput) {
           saveRecordNameInput.value = makeDefaultSaveName(currentSnapshot);
         }
         saveOverlayEl.classList.add("active");
         saveOverlayEl.setAttribute("aria-hidden", "false");
         refreshSaveRecordGrid();
-        showSaveMessage("建立新存檔會新增一格；先選取存檔槽後可覆蓋。每格會保留角色性別與目前進度。\u00a0");
-        keys[" "] = false;
-        canPressInteract = false;
+        showSaveMessage("新增會建立新格子；先選取一格後可覆蓋、讀取或刪除。Ctrl+S 在此視窗內會直接新增並下載。");
+        clearGameplayKeys();
         setTimeout(() => saveRecordNameInput?.focus(), 0);
       }
 
@@ -2644,11 +2546,7 @@
         if (!saveOverlayEl) return;
         saveOverlayEl.classList.remove("active");
         saveOverlayEl.setAttribute("aria-hidden", "true");
-        keys[" "] = false;
-        canPressInteract = false;
-        setTimeout(() => {
-          canPressInteract = true;
-        }, 120);
+        clearGameplayKeys();
       }
 
       const ELDER_SPOTS = {
@@ -9101,6 +8999,7 @@
       });
       saveAddBtn?.addEventListener("click", addCurrentSaveRecordAndDownload);
       saveOverwriteBtn?.addEventListener("click", overwriteSelectedSaveRecordAndDownload);
+      saveDeleteBtn?.addEventListener("click", deleteSelectedSaveRecord);
       saveDownloadBtn?.addEventListener("click", downloadAllSaveRecords);
       saveUploadBtn?.addEventListener("click", () => saveFileInput?.click());
       saveFileInput?.addEventListener("change", (e) => {
