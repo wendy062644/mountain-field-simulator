@@ -1,0 +1,68 @@
+name: Deploy GitHub Pages safely
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Prepare static site without private save JSON
+        shell: bash
+        run: |
+          rm -rf dist
+          mkdir -p dist
+
+          # Copy the site with a deny-list for generated/private files.
+          # Do not upload the repository root directly as the Pages artifact.
+          rsync -av --delete ./ dist/ \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='dist/' \
+            --exclude='node_modules/' \
+            --exclude='downloads/' \
+            --exclude='test-results/' \
+            --exclude='playwright-report/' \
+            --exclude='private-rukai-millet-saves-*.json' \
+            --exclude='rukai-millet-saves-*.json' \
+            --exclude='*.save.json'
+
+          # Extra guard in case a save file was created by a browser test before this step.
+          find dist -type f \( \
+            -name 'private-rukai-millet-saves-*.json' -o \
+            -name 'rukai-millet-saves-*.json' -o \
+            -name '*.save.json' \
+          \) -delete
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
