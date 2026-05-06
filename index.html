@@ -284,7 +284,7 @@
 
       .save-control-row {
         display: grid;
-        grid-template-columns: minmax(180px, 1fr) auto;
+        grid-template-columns: 1fr;
         gap: 12px;
         align-items: center;
         margin-bottom: 12px;
@@ -432,16 +432,16 @@
 
       <div id="saveQuickActions" class="save-quick-actions" aria-label="快捷功能">
         <button id="openInventoryBtn" type="button">背包 (B)</button>
-        <button id="openSaveManagerBtn" type="button">存檔 / 上傳</button>
+        <button id="openSaveManagerBtn" type="button">本機存檔</button>
       </div>
 
       <div id="saveOverlay" aria-hidden="true">
         <section class="save-panel" role="dialog" aria-modal="true" aria-labelledby="savePanelTitle">
           <header class="save-panel-header">
             <div>
-              <h2 id="savePanelTitle" class="save-panel-title">存檔 / 記憶回溯</h2>
+              <h2 id="savePanelTitle" class="save-panel-title">本機存檔 / 記憶回溯</h2>
               <p class="save-panel-subtitle">
-                存檔預設只保存在目前這台裝置的瀏覽器，不會自動下載、上傳或寫進 GitHub。需要換電腦或備份時，再手動匯出 / 匯入私人 JSON。
+                存檔只保存在目前這台裝置的瀏覽器 localStorage。本版不會建立任何存檔檔案，也不提供匯入 / 匯出，避免 GitHub Actions 或 Pages 部署公開玩家紀錄。
               </p>
             </div>
             <button id="saveCloseBtn" class="save-ui-button secondary" type="button" aria-label="關閉存檔視窗">×</button>
@@ -450,17 +450,15 @@
           <div class="save-panel-body">
             <div class="save-control-row">
               <input id="saveRecordName" type="text" maxlength="48" placeholder="輸入這筆紀錄名稱，例如：第一次入倉前" />
-              <button id="saveUploadBtn" class="save-ui-button secondary" type="button">匯入我的 JSON</button>
             </div>
 
             <div class="save-actions">
-              <button id="saveAddBtn" class="save-ui-button" type="button">新增目前進度（本機）</button>
-              <button id="saveOverwriteBtn" class="save-ui-button" type="button">覆蓋選取紀錄（本機）</button>
+              <button id="saveAddBtn" class="save-ui-button" type="button">新增目前進度</button>
+              <button id="saveOverwriteBtn" class="save-ui-button" type="button">覆蓋選取紀錄</button>
               <button id="saveDeleteBtn" class="save-ui-button danger" type="button">刪除選取紀錄</button>
-              <button id="saveDownloadBtn" class="save-ui-button secondary" type="button">匯出我的紀錄 JSON</button>
             </div>
 
-            <input id="saveFileInput" type="file" accept="application/json,.json" hidden />
+            
             <div id="saveMessage" class="save-message"></div>
 
             <div class="save-grid-heading">
@@ -494,9 +492,6 @@
       const saveAddBtn = document.getElementById("saveAddBtn");
       const saveOverwriteBtn = document.getElementById("saveOverwriteBtn");
       const saveDeleteBtn = document.getElementById("saveDeleteBtn");
-      const saveDownloadBtn = document.getElementById("saveDownloadBtn");
-      const saveUploadBtn = document.getElementById("saveUploadBtn");
-      const saveFileInput = document.getElementById("saveFileInput");
       const saveMessageEl = document.getElementById("saveMessage");
       const saveRecordGridEl = document.getElementById("saveRecordGrid");
       const saveRecordCountEl = document.getElementById("saveRecordCount");
@@ -1494,10 +1489,10 @@
 
       const SAVE_FILE_VERSION = 3;
       const SAVE_APP_ID = "rukai-millet-game";
-      // 玩家進度只寫在使用者自己的瀏覽器儲存空間；不要把 JSON 備份放進 GitHub Actions 部署目錄。
-      const SAVE_STORAGE_KEY = "rukaiMilletSaveRecordsV1";
-      const SAVE_STORAGE_MIRROR_KEY = "rukaiMilletSaveRecordsV2";
-      const SAVE_OWNER_KEY = "rukaiMilletSaveOwnerIdV1";
+      // 玩家進度只寫在使用者自己的瀏覽器儲存空間；本版不產生任何存檔檔案，避免 GitHub Actions 或 Pages artifact 帶出私人紀錄。
+      const SAVE_STORAGE_KEY = "rukaiMilletLocalOnlyRecordsV4";
+      const SAVE_STORAGE_MIRROR_KEY = "rukaiMilletLocalOnlyRecordsV4Mirror";
+      const SAVE_OWNER_KEY = "rukaiMilletLocalOnlyOwnerIdV2";
       let selectedSaveRecordId = null;
       let saveOwnerMemory = null;
       let saveRecordsMemory = [];
@@ -1530,8 +1525,27 @@
         return `owner_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
       }
 
+      function isMemoryOnlySaveEnvironment() {
+        try {
+          const params = new URLSearchParams(window.location.search || "");
+          return !!(
+            (typeof navigator !== "undefined" && navigator.webdriver) ||
+            params.has("ci") ||
+            params.get("save") === "memory" ||
+            params.get("storage") === "memory"
+          );
+        } catch (err) {
+          return !!(typeof navigator !== "undefined" && navigator.webdriver);
+        }
+      }
+
       function getSaveOwnerId() {
         if (saveOwnerMemory) return saveOwnerMemory;
+        if (isMemoryOnlySaveEnvironment()) {
+          // GitHub Actions / Playwright / Selenium 測試環境不寫入 localStorage，避免 storageState 或 artifact 保存玩家資料。
+          saveOwnerMemory = createSaveOwnerId();
+          return saveOwnerMemory;
+        }
         try {
           let ownerId = localStorage.getItem(SAVE_OWNER_KEY);
           if (!ownerId) {
@@ -2049,6 +2063,9 @@
       }
 
       function getStoredSaveRecords() {
+        if (isMemoryOnlySaveEnvironment()) {
+          return [];
+        }
         try {
           const primary = localStorage.getItem(SAVE_STORAGE_KEY);
           const mirror = localStorage.getItem(SAVE_STORAGE_MIRROR_KEY);
@@ -2091,6 +2108,15 @@
         };
         const raw = JSON.stringify(payload);
 
+        if (isMemoryOnlySaveEnvironment()) {
+          if (options.showWarning !== false) {
+            showSaveMessage(
+              "偵測到自動化測試或記憶體模式；本次紀錄只保留在目前頁面記憶體，不會寫入 localStorage，也不會進入 GitHub Actions artifact。",
+            );
+          }
+          return true;
+        }
+
         try {
           localStorage.setItem(SAVE_STORAGE_KEY, raw);
           localStorage.setItem(SAVE_STORAGE_MIRROR_KEY, raw);
@@ -2100,7 +2126,7 @@
           console.warn("寫入本機存檔失敗：", err);
           if (options.showWarning !== false) {
             showSaveMessage(
-              "瀏覽器封鎖了本機儲存；這次紀錄只會保留在目前頁面，重新整理後可能消失。需要保留時請手動匯出 JSON。",
+              "瀏覽器封鎖了本機儲存；這次紀錄只會保留在目前頁面，重新整理後可能消失。",
             );
           }
           return false;
@@ -2130,52 +2156,8 @@
         return date.toLocaleString("zh-TW", { hour12: false });
       }
 
-      function isAutomatedBrowser() {
-        return !!(
-          typeof navigator !== "undefined" &&
-          navigator.webdriver
-        );
-      }
-
-      function downloadSaveCollection(records) {
-        if (isAutomatedBrowser()) {
-          showSaveMessage(
-            "偵測到自動化測試瀏覽器，已阻止 JSON 下載，避免 GitHub Actions 把私人紀錄打包進部署檔。",
-          );
-          return false;
-        }
-
-        const normalized = onlyCurrentOwnerRecords(records);
-        const payload = {
-          app: SAVE_APP_ID,
-          version: SAVE_FILE_VERSION,
-          ownerId: getSaveOwnerId(),
-          exportedAt: new Date().toISOString(),
-          privacyNotice:
-            "這是玩家個人的本機存檔備份，請勿提交到 GitHub repo，也不要放進 GitHub Pages 部署目錄。",
-          records: normalized,
-        };
-        try {
-          const blob = new Blob([JSON.stringify(payload, null, 2)], {
-            type: "application/json;charset=utf-8",
-          });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-          a.href = url;
-          a.download = `private-rukai-millet-saves-${stamp}.json`;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          setTimeout(() => URL.revokeObjectURL(url), 1000);
-          return true;
-        } catch (err) {
-          console.warn("下載存檔失敗：", err);
-          showSaveMessage("匯出失敗。請確認瀏覽器允許此頁面建立下載檔。");
-          return false;
-        }
-      }
-
+      
+      
       function showSaveMessage(text) {
         if (!saveMessageEl) return;
         saveMessageEl.textContent = text || "";
@@ -2205,7 +2187,7 @@
         if (sorted.length === 0) {
           const empty = document.createElement("div");
           empty.className = "save-empty";
-          empty.textContent = "目前沒有紀錄。可以先新增目前進度；需要換裝置時，再匯入之前自己匯出的 JSON。";
+          empty.textContent = "目前沒有紀錄。可以先新增目前進度；紀錄只會保存在目前這台裝置的瀏覽器。";
           saveRecordGridEl.appendChild(empty);
           return;
         }
@@ -2296,8 +2278,8 @@
         if (saveRecordNameInput) saveRecordNameInput.value = record.name;
         showSaveMessage(
           stored
-            ? `已新增「${record.name}」。這筆紀錄只保存在目前瀏覽器，不會自動下載或寫進 GitHub。`
-            : `已新增「${record.name}」到目前頁面；但瀏覽器封鎖本機儲存，重新整理後可能消失，請手動匯出 JSON 備份。`,
+            ? `已新增「${record.name}」。這筆紀錄只保存在目前瀏覽器，不會下載、上傳或寫進 GitHub。`
+            : `已新增「${record.name}」到目前頁面；但瀏覽器封鎖本機儲存，重新整理後可能消失。`,
         );
       }
 
@@ -2322,8 +2304,8 @@
         if (saveRecordNameInput) saveRecordNameInput.value = record.name;
         showSaveMessage(
           stored
-            ? `已覆蓋「${record.name}」。這筆紀錄只保存在目前瀏覽器，不會自動下載或寫進 GitHub。`
-            : `已覆蓋「${record.name}」到目前頁面；但瀏覽器封鎖本機儲存，重新整理後可能消失，請手動匯出 JSON 備份。`,
+            ? `已覆蓋「${record.name}」。這筆紀錄只保存在目前瀏覽器，不會下載、上傳或寫進 GitHub。`
+            : `已覆蓋「${record.name}」到目前頁面；但瀏覽器封鎖本機儲存，重新整理後可能消失。`,
         );
       }
 
@@ -2340,7 +2322,7 @@
           showSaveMessage("找不到剛才選取的紀錄，請重新選取一格。");
           return;
         }
-        const ok = confirm(`確定要刪除「${record.name}」嗎？需要備份的話，請先用「匯出我的紀錄 JSON」。`);
+        const ok = confirm(`確定要刪除「${record.name}」嗎？刪除後只會影響目前瀏覽器的本機紀錄。`);
         if (!ok) return;
         const nextRecords = records.filter((item) => item.id !== selectedSaveRecordId);
         selectedSaveRecordId = null;
@@ -2348,67 +2330,13 @@
         refreshSaveRecordGrid(nextRecords);
         showSaveMessage(
           stored
-            ? `已刪除「${record.name}」。需要備份時，可按「匯出我的紀錄 JSON」更新私人備份。`
-            : `已在目前頁面刪除「${record.name}」；但本機暫存被封鎖，需要保存最新狀態時請手動匯出 JSON。`,
+            ? `已刪除「${record.name}」。`
+            : `已在目前頁面刪除「${record.name}」；但本機暫存被封鎖，重新整理後可能恢復。`,
         );
       }
 
-      function downloadAllSaveRecords() {
-        const records = readSaveRecords();
-        if (records.length === 0) {
-          showSaveMessage("目前沒有任何紀錄可以匯出。");
-          return;
-        }
-        if (downloadSaveCollection(records)) {
-          showSaveMessage(`已匯出 ${records.length} 筆私人紀錄 JSON。請只保存在自己的裝置，不要提交到 GitHub。`);
-        }
-      }
-
-      function importSaveRecordsFromFile(file) {
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          try {
-            const parsed = JSON.parse(String(reader.result || "{}"));
-            const imported = normalizeSaveRecords(parsed).map(markRecordAsCurrentOwner);
-            if (imported.length === 0) {
-              showSaveMessage("這個檔案沒有可讀取的存檔紀錄。");
-              return;
-            }
-
-            const existing = readSaveRecords();
-            const existingIds = new Set(existing.map((record) => record.id));
-            let added = 0;
-            let updated = 0;
-            imported.forEach((record) => {
-              if (existingIds.has(record.id)) updated++;
-              else added++;
-            });
-
-            const merged = onlyCurrentOwnerRecords(mergeSaveRecordLists(imported, existing));
-            const stored = writeSaveRecords(merged, { showWarning: false });
-            selectedSaveRecordId = imported[0].id;
-            if (saveRecordNameInput) saveRecordNameInput.value = imported[0].name;
-            refreshSaveRecordGrid(merged);
-            showSaveMessage(
-              stored
-                ? `匯入完成：新增 ${added} 筆、更新 ${updated} 筆。每筆紀錄已顯示在下方格子中。`
-                : `匯入完成：新增 ${added} 筆、更新 ${updated} 筆；但本機暫存被封鎖，需要保留整合結果時請手動匯出 JSON。`,
-            );
-          } catch (err) {
-            console.warn("匯入存檔失敗：", err);
-            showSaveMessage("讀取失敗，請確認匯入的是本遊戲匯出的 JSON 存檔。");
-          } finally {
-            if (saveFileInput) saveFileInput.value = "";
-          }
-        };
-        reader.onerror = () => {
-          showSaveMessage("讀取檔案失敗，請重新選擇 JSON 存檔。");
-          if (saveFileInput) saveFileInput.value = "";
-        };
-        reader.readAsText(file, "utf-8");
-      }
-
+      
+      
       function restoreBirds(savedBirds) {
         if (!Array.isArray(savedBirds)) return [];
         return savedBirds
@@ -2580,12 +2508,12 @@
       function loadSaveRecord(recordId, fallbackRecord = null) {
         const record = findSaveRecordForLoad(recordId, fallbackRecord);
         if (!record) {
-          showSaveMessage("找不到這筆紀錄，請重新開啟存檔視窗或重新匯入 JSON。");
+          showSaveMessage("找不到這筆紀錄，請重新開啟存檔視窗。");
           return;
         }
         const ok = applyGameSnapshot(record.snapshot);
         if (!ok) {
-          showSaveMessage("這筆紀錄無法套用，可能是 JSON 已損壞或版本過舊。");
+          showSaveMessage("這筆紀錄無法套用，可能是本機資料已損壞或版本過舊。");
           return;
         }
         selectedSaveRecordId = record.id;
@@ -2609,7 +2537,7 @@
         saveOverlayEl.classList.add("active");
         saveOverlayEl.setAttribute("aria-hidden", "false");
         refreshSaveRecordGrid();
-        showSaveMessage("新增會建立只屬於目前瀏覽器的本機紀錄；先選取一格後可覆蓋、讀取或刪除。Ctrl+S 在此視窗內會新增本機紀錄，不會自動下載。");
+        showSaveMessage("新增會建立只屬於目前瀏覽器的本機紀錄；先選取一格後可覆蓋、讀取或刪除。Ctrl+S 在此視窗內會新增本機紀錄，不會產生檔案。");
         clearGameplayKeys();
         setTimeout(() => saveRecordNameInput?.focus(), 0);
       }
@@ -9072,11 +9000,6 @@
       saveAddBtn?.addEventListener("click", addCurrentSaveRecord);
       saveOverwriteBtn?.addEventListener("click", overwriteSelectedSaveRecord);
       saveDeleteBtn?.addEventListener("click", deleteSelectedSaveRecord);
-      saveDownloadBtn?.addEventListener("click", downloadAllSaveRecords);
-      saveUploadBtn?.addEventListener("click", () => saveFileInput?.click());
-      saveFileInput?.addEventListener("change", (e) => {
-        importSaveRecordsFromFile(e.target.files?.[0]);
-      });
 
       loadAssets(() => {
         init();
