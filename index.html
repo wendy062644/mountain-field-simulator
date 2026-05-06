@@ -521,7 +521,11 @@
         if (isSaveManagerOpen()) {
           if ((e.ctrlKey || e.metaKey) && k === "s") {
             e.preventDefault();
-            addCurrentSaveRecord();
+            if (canCreateSaveFromCurrentState()) {
+              addCurrentSaveRecord();
+            } else {
+              showSaveMessage("首頁存檔管理已移除新增目前進度；請讀取既有紀錄，或進入遊戲後再建立本機存檔。");
+            }
           } else if (k === "Escape") {
             e.preventDefault();
             closeSaveManager();
@@ -1617,6 +1621,58 @@
         }, 120);
       }
 
+      function normalizeGenderValue(value) {
+        const text = String(value ?? "").trim().toLowerCase();
+        return ["female", "f", "girl", "woman", "女", "女性", "女生"].includes(text)
+          ? "female"
+          : "male";
+      }
+
+      function getGenderLabel(value) {
+        return normalizeGenderValue(value) === "female" ? "女" : "男";
+      }
+
+      function getRecordGender(record) {
+        return normalizeGenderValue(
+          record?.gender || record?.selectedGender || record?.snapshot?.selectedGender,
+        );
+      }
+
+      function canCreateSaveFromCurrentState() {
+        return !!(game.started && !game.inMainMenu && game.player);
+      }
+
+      function syncSaveManagerCreateControls() {
+        const canCreate = canCreateSaveFromCurrentState();
+        if (saveAddBtn) {
+          saveAddBtn.hidden = !canCreate;
+          saveAddBtn.disabled = !canCreate;
+          saveAddBtn.setAttribute("aria-hidden", String(!canCreate));
+        }
+        if (saveOverwriteBtn) {
+          saveOverwriteBtn.hidden = !canCreate;
+          saveOverwriteBtn.disabled = !canCreate;
+          saveOverwriteBtn.setAttribute("aria-hidden", String(!canCreate));
+        }
+        if (saveRecordNameInput) {
+          saveRecordNameInput.disabled = !canCreate;
+          const nameRow = saveRecordNameInput.closest(".save-control-row");
+          if (nameRow) nameRow.hidden = !canCreate;
+          if (!canCreate) {
+            saveRecordNameInput.value = "";
+          } else {
+            saveRecordNameInput.placeholder = "輸入這筆紀錄名稱，例如：第一次入倉前";
+          }
+        }
+      }
+
+      function getSaveSelectionMessage(record) {
+        if (canCreateSaveFromCurrentState()) {
+          return `已選取「${record.name}」，可用覆蓋按鈕更新這一格。`;
+        }
+        return `已選取「${record.name}」，首頁存檔管理只能讀取或刪除紀錄。`;
+      }
+
       function getSnapshotSceneLabel(snapshot) {
         if (!snapshot || !snapshot.started) {
           return snapshot && !snapshot.inMainMenu ? "角色建立" : "主選單";
@@ -1805,7 +1861,7 @@
           version: Math.max(SAVE_FILE_VERSION, safeInteger(safe.version, 1)),
           capturedAt: normalizeIsoText(safe.capturedAt, new Date().toISOString()),
           saveOwnerId: safeString(safe.saveOwnerId, ""),
-          selectedGender: safe.selectedGender === "female" ? "female" : "male",
+          selectedGender: normalizeGenderValue(safe.selectedGender),
           playerName: safeString(safe.playerName, ""),
           currentSpeaker: safeString(safe.currentSpeaker, "system"),
           currentTitle: safeString(safe.currentTitle, "魯凱族山田燒墾"),
@@ -2020,13 +2076,18 @@
               normalizedSnapshot.capturedAt || new Date().toISOString(),
             );
             const ownerId = safeString(record.ownerId || normalizedSnapshot.saveOwnerId, getSaveOwnerId());
+            const gender = normalizeGenderValue(
+              record.gender || record.selectedGender || normalizedSnapshot.selectedGender,
+            );
             normalizedSnapshot.saveOwnerId = ownerId;
+            normalizedSnapshot.selectedGender = gender;
             return {
               id: safeString(record.id, createSaveId()),
               ownerId,
               name: safeString(record.name, makeDefaultSaveName(normalizedSnapshot)),
               savedAt,
               playerName: safeString(record.playerName || normalizedSnapshot.playerName, "無名之人"),
+              gender,
               scene: getSnapshotSceneLabel(normalizedSnapshot),
               progress: describeSnapshotProgress(normalizedSnapshot),
               snapshot: normalizedSnapshot,
@@ -2144,6 +2205,7 @@
           name,
           savedAt,
           playerName: safeString(snapshot.playerName, "無名之人"),
+          gender: normalizeGenderValue(snapshot.selectedGender),
           scene: getSnapshotSceneLabel(snapshot),
           progress: describeSnapshotProgress(snapshot),
           snapshot,
@@ -2187,7 +2249,9 @@
         if (sorted.length === 0) {
           const empty = document.createElement("div");
           empty.className = "save-empty";
-          empty.textContent = "目前沒有紀錄。可以先新增目前進度；紀錄只會保存在目前這台裝置的瀏覽器。";
+          empty.textContent = canCreateSaveFromCurrentState()
+            ? "目前沒有紀錄。可以新增目前進度；紀錄只會保存在目前這台裝置的瀏覽器。"
+            : "目前沒有紀錄。首頁存檔管理不會新增目前進度；請先開始遊戲，之後再用本機存檔建立紀錄。";
           saveRecordGridEl.appendChild(empty);
           return;
         }
@@ -2205,6 +2269,7 @@
           meta.className = "save-card-meta";
           const metaLines = [
             `角色：${record.playerName || "無名之人"}`,
+            `性別：${getGenderLabel(getRecordGender(record))}`,
             `場景：${record.scene || getSnapshotSceneLabel(record.snapshot)}`,
             `進度：${record.progress || describeSnapshotProgress(record.snapshot)}`,
             getInventorySummary(record.snapshot?.inventory, record.snapshot?.money),
@@ -2225,7 +2290,7 @@
           selectBtn.addEventListener("click", (ev) => {
             ev.stopPropagation();
             setSelectedSaveRecord(record.id);
-            showSaveMessage(`已選取「${record.name}」，可用覆蓋按鈕更新這一格。`);
+            showSaveMessage(getSaveSelectionMessage(record));
           });
 
           const loadBtn = document.createElement("button");
@@ -2254,7 +2319,7 @@
 
           card.addEventListener("click", () => {
             setSelectedSaveRecord(record.id);
-            showSaveMessage(`已選取「${record.name}」，可用覆蓋按鈕更新這一格。`);
+            showSaveMessage(getSaveSelectionMessage(record));
           });
           card.addEventListener("keydown", (ev) => {
             if (ev.key === "Enter" || ev.key === " ") {
@@ -2269,6 +2334,11 @@
       }
 
       function addCurrentSaveRecord() {
+        if (!canCreateSaveFromCurrentState()) {
+          showSaveMessage("首頁存檔管理已移除新增目前進度，避免把主選單狀態存成壞紀錄。請進入遊戲後再新增存檔。");
+          syncSaveManagerCreateControls();
+          return;
+        }
         const records = readSaveRecords();
         const record = markRecordAsCurrentOwner(createCurrentSaveRecord());
         const nextRecords = onlyCurrentOwnerRecords(mergeSaveRecordLists([record], records));
@@ -2284,9 +2354,14 @@
       }
 
       function overwriteSelectedSaveRecord() {
+        if (!canCreateSaveFromCurrentState()) {
+          showSaveMessage("首頁存檔管理不能覆蓋紀錄，避免把主選單狀態寫進既有存檔。請讀取紀錄，或進入遊戲後再覆蓋。");
+          syncSaveManagerCreateControls();
+          return;
+        }
         const records = readSaveRecords();
         if (!selectedSaveRecordId) {
-          showSaveMessage("請先在下方格子選取要覆蓋的紀錄。也可以改用新增目前進度。");
+          showSaveMessage("請先在下方格子選取要覆蓋的紀錄。也可以新增目前進度建立新格子。");
           return;
         }
         const index = records.findIndex((record) => record.id === selectedSaveRecordId);
@@ -2529,17 +2604,26 @@
         if (!saveOverlayEl) return;
         game.inventoryOpen = false;
         game.settingsOpen = false;
-        const currentSnapshot = createGameSnapshot();
+        const canCreate = canCreateSaveFromCurrentState();
+        const currentSnapshot = canCreate ? createGameSnapshot() : null;
         selectedSaveRecordId = null;
         if (saveRecordNameInput) {
-          saveRecordNameInput.value = makeDefaultSaveName(currentSnapshot);
+          saveRecordNameInput.value = currentSnapshot ? makeDefaultSaveName(currentSnapshot) : "";
         }
+        syncSaveManagerCreateControls();
         saveOverlayEl.classList.add("active");
         saveOverlayEl.setAttribute("aria-hidden", "false");
         refreshSaveRecordGrid();
-        showSaveMessage("新增會建立只屬於目前瀏覽器的本機紀錄；先選取一格後可覆蓋、讀取或刪除。Ctrl+S 在此視窗內會新增本機紀錄，不會產生檔案。");
+        showSaveMessage(
+          canCreate
+            ? "可新增本機紀錄；先選取一格後可覆蓋、讀取或刪除。紀錄不會產生檔案，也不會寫進 GitHub。"
+            : "首頁存檔管理已移除新增目前進度；這裡只能讀取或刪除既有紀錄，避免建立主選單空白紀錄。",
+        );
         clearGameplayKeys();
-        setTimeout(() => saveRecordNameInput?.focus(), 0);
+        setTimeout(() => {
+          if (canCreate) saveRecordNameInput?.focus();
+          else saveCloseBtn?.focus?.();
+        }, 0);
       }
 
       function closeSaveManager() {
