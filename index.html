@@ -174,6 +174,236 @@
       #dialogue.show-portrait #dialoguePortrait {
         display: block;
       }
+
+
+      .save-quick-actions {
+        position: absolute;
+        top: 92px;
+        right: 2vw;
+        z-index: 24;
+        display: none;
+        gap: 8px;
+        pointer-events: auto;
+      }
+
+      .save-ui-button,
+      .save-quick-actions button {
+        appearance: none;
+        border: 2px solid var(--ui-border);
+        border-radius: 12px;
+        background: rgba(35, 24, 12, 0.92);
+        color: var(--ui-text);
+        font-family: inherit;
+        font-weight: 800;
+        font-size: 15px;
+        padding: 10px 14px;
+        cursor: pointer;
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+      }
+
+      .save-ui-button:hover,
+      .save-quick-actions button:hover,
+      .save-card button:hover {
+        background: rgba(80, 45, 22, 0.96);
+      }
+
+      .save-ui-button.secondary {
+        background: rgba(55, 42, 26, 0.92);
+      }
+
+      .save-ui-button.danger {
+        border-color: #ffb38a;
+      }
+
+      #saveOverlay {
+        position: absolute;
+        inset: 0;
+        z-index: 60;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 22px;
+        background: rgba(0, 0, 0, 0.58);
+        pointer-events: auto;
+      }
+
+      #saveOverlay.active {
+        display: flex;
+      }
+
+      .save-panel {
+        width: min(94vw, 1020px);
+        max-height: 88vh;
+        overflow: hidden;
+        color: var(--ui-text);
+        background: linear-gradient(
+          rgba(42, 28, 16, 0.98),
+          rgba(25, 18, 12, 0.98)
+        );
+        border: 4px solid var(--ui-border);
+        border-radius: 22px;
+        box-shadow: 0 22px 54px rgba(0, 0, 0, 0.45);
+        display: flex;
+        flex-direction: column;
+      }
+
+      .save-panel-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 20px 22px 12px;
+        border-bottom: 1px solid rgba(230, 201, 138, 0.35);
+      }
+
+      .save-panel-title {
+        margin: 0;
+        color: #ffd27d;
+        font-size: 28px;
+        line-height: 1.25;
+      }
+
+      .save-panel-subtitle {
+        margin: 8px 0 0;
+        color: #ffebb9;
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      #saveCloseBtn {
+        min-width: 42px;
+        padding: 8px 12px;
+        font-size: 22px;
+        line-height: 1;
+      }
+
+      .save-panel-body {
+        padding: 18px 22px 22px;
+        overflow: auto;
+      }
+
+      .save-control-row {
+        display: grid;
+        grid-template-columns: minmax(180px, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      #saveRecordName {
+        width: 100%;
+        border: 2px solid rgba(230, 201, 138, 0.8);
+        border-radius: 12px;
+        background: rgba(255, 247, 222, 0.95);
+        color: #2f2113;
+        font-family: inherit;
+        font-size: 16px;
+        font-weight: 700;
+        padding: 12px 14px;
+      }
+
+      .save-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .save-message {
+        min-height: 24px;
+        margin: 8px 0 14px;
+        color: #ffebb9;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .save-grid-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin: 10px 0;
+        color: #ffd27d;
+        font-weight: 900;
+      }
+
+      .save-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 12px;
+      }
+
+      .save-card {
+        border: 2px solid rgba(230, 201, 138, 0.5);
+        border-radius: 16px;
+        background: rgba(20, 14, 8, 0.58);
+        padding: 14px;
+        cursor: pointer;
+        min-height: 178px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .save-card.selected {
+        border-color: #ffd27d;
+        box-shadow: 0 0 0 3px rgba(255, 210, 125, 0.18);
+        background: rgba(72, 42, 18, 0.72);
+      }
+
+      .save-card-title {
+        color: #fff7de;
+        font-weight: 900;
+        font-size: 18px;
+        line-height: 1.35;
+        word-break: break-word;
+      }
+
+      .save-card-meta {
+        color: #ffebb9;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .save-card-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: auto;
+      }
+
+      .save-card button {
+        appearance: none;
+        border: 1px solid var(--ui-border);
+        border-radius: 10px;
+        background: rgba(35, 24, 12, 0.9);
+        color: var(--ui-text);
+        font-family: inherit;
+        font-weight: 800;
+        padding: 8px 10px;
+        cursor: pointer;
+        flex: 1;
+      }
+
+      .save-empty {
+        border: 2px dashed rgba(230, 201, 138, 0.45);
+        border-radius: 16px;
+        padding: 24px;
+        color: #ffebb9;
+        text-align: center;
+        grid-column: 1 / -1;
+      }
+
+      @media (max-width: 720px) {
+        .save-control-row {
+          grid-template-columns: 1fr;
+        }
+
+        .save-quick-actions {
+          top: auto;
+          right: 2vw;
+          bottom: 18px;
+        }
+      }
     </style>
   </head>
   <body>
@@ -198,6 +428,47 @@
           <div class="hint">操作：移動 / 空白鍵互動 / R 重新開始</div>
         </div>
       </div>
+
+
+      <div id="saveQuickActions" class="save-quick-actions" aria-label="存檔功能">
+        <button id="openSaveManagerBtn" type="button">存檔 / 上傳</button>
+      </div>
+
+      <div id="saveOverlay" aria-hidden="true">
+        <section class="save-panel" role="dialog" aria-modal="true" aria-labelledby="savePanelTitle">
+          <header class="save-panel-header">
+            <div>
+              <h2 id="savePanelTitle" class="save-panel-title">存檔 / 記憶回溯</h2>
+              <p class="save-panel-subtitle">
+                GitHub Pages 是靜態網站，這裡會把目前進度做成 JSON 檔下載；之後上傳同一個 JSON，就能用格子檢視每筆紀錄並讀取。
+              </p>
+            </div>
+            <button id="saveCloseBtn" class="save-ui-button secondary" type="button" aria-label="關閉存檔視窗">×</button>
+          </header>
+
+          <div class="save-panel-body">
+            <div class="save-control-row">
+              <input id="saveRecordName" type="text" maxlength="48" placeholder="輸入這筆紀錄名稱，例如：第一次入倉前" />
+              <button id="saveUploadBtn" class="save-ui-button secondary" type="button">上傳存檔 JSON</button>
+            </div>
+
+            <div class="save-actions">
+              <button id="saveAddBtn" class="save-ui-button" type="button">新增目前進度並下載</button>
+              <button id="saveOverwriteBtn" class="save-ui-button" type="button">覆蓋選取紀錄並下載</button>
+              <button id="saveDownloadBtn" class="save-ui-button secondary" type="button">只下載全部紀錄</button>
+            </div>
+
+            <input id="saveFileInput" type="file" accept="application/json,.json" hidden />
+            <div id="saveMessage" class="save-message"></div>
+
+            <div class="save-grid-heading">
+              <span>紀錄格子</span>
+              <span id="saveRecordCount">0 筆紀錄</span>
+            </div>
+            <div id="saveRecordGrid" class="save-grid" aria-live="polite"></div>
+          </div>
+        </section>
+      </div>
     </div>
 
     <script>
@@ -211,6 +482,20 @@
       const missionEl = document.getElementById("mission");
       const statusEl = document.getElementById("status");
       const topbarEl = document.getElementById("topbar");
+
+      const saveQuickActionsEl = document.getElementById("saveQuickActions");
+      const openSaveManagerBtn = document.getElementById("openSaveManagerBtn");
+      const saveOverlayEl = document.getElementById("saveOverlay");
+      const saveCloseBtn = document.getElementById("saveCloseBtn");
+      const saveRecordNameInput = document.getElementById("saveRecordName");
+      const saveAddBtn = document.getElementById("saveAddBtn");
+      const saveOverwriteBtn = document.getElementById("saveOverwriteBtn");
+      const saveDownloadBtn = document.getElementById("saveDownloadBtn");
+      const saveUploadBtn = document.getElementById("saveUploadBtn");
+      const saveFileInput = document.getElementById("saveFileInput");
+      const saveMessageEl = document.getElementById("saveMessage");
+      const saveRecordGridEl = document.getElementById("saveRecordGrid");
+      const saveRecordCountEl = document.getElementById("saveRecordCount");
 
       const backgroundMusic = new Audio("background_music.mp3");
       const maleSong = new Audio("A.mp3");
@@ -233,6 +518,20 @@
 
       document.addEventListener("keydown", (e) => {
         const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+
+        if (isSaveManagerOpen()) {
+          if (k === "Escape") {
+            e.preventDefault();
+            closeSaveManager();
+          }
+          return;
+        }
+
+        if ((e.ctrlKey || e.metaKey) && k === "s") {
+          e.preventDefault();
+          openSaveManager();
+          return;
+        }
 
         if (
           [
@@ -292,15 +591,17 @@
 
         if (!game.started) {
           if (game.inMainMenu) {
-            if (k === "arrowup" || k === "w") {
+            if (k === "ArrowUp" || k === "arrowup" || k === "w") {
               game.mainMenuSelection = (game.mainMenuSelection - 1 + 5) % 5;
             }
-            if (k === "arrowdown" || k === "s") {
+            if (k === "ArrowDown" || k === "arrowdown" || k === "s") {
               game.mainMenuSelection = (game.mainMenuSelection + 1) % 5;
             }
             if (k === "Enter" || k === " ") {
               if (game.mainMenuSelection === 0) {
                 game.inMainMenu = false; // 進入創建角色
+              } else if (game.mainMenuSelection === 1) {
+                openSaveManager();
               } else if (game.mainMenuSelection === 3) {
                 toggleSettingsMenu();
               } else if (game.mainMenuSelection === 4) {
@@ -322,8 +623,8 @@
             return;
           }
 
-          if (k === "a" || k === "arrowleft") game.selectedGender = "male";
-          if (k === "d" || k === "arrowright") game.selectedGender = "female";
+          if (k === "a" || k === "ArrowLeft" || k === "arrowleft") game.selectedGender = "male";
+          if (k === "d" || k === "ArrowRight" || k === "arrowright") game.selectedGender = "female";
           if (k === "Enter") {
             const n = prompt("請輸入角色名字：", game.playerName || "");
             if (n && n.trim()) game.playerName = n.trim();
@@ -402,6 +703,9 @@
               game.mainMenuSelection = i;
               if (i === 0) {
                 game.inMainMenu = false; // 進入創建角色
+                canvas.style.cursor = "default";
+              } else if (i === 1) {
+                openSaveManager();
                 canvas.style.cursor = "default";
               } else if (i === 3) {
                 toggleSettingsMenu();
@@ -701,6 +1005,641 @@
         } else if (game.selectedSettingRow === 1) {
           game.gameSpeed = Math.max(50, Math.min(200, game.gameSpeed + delta));
         }
+      }
+
+
+      const SAVE_FILE_VERSION = 1;
+      const SAVE_STORAGE_KEY = "rukaiMilletSaveRecordsV1";
+      let selectedSaveRecordId = null;
+
+      function isSaveManagerOpen() {
+        return !!(saveOverlayEl && saveOverlayEl.classList.contains("active"));
+      }
+
+      function clonePlain(value, fallback = null) {
+        if (value === undefined) return fallback;
+        try {
+          return JSON.parse(JSON.stringify(value));
+        } catch (err) {
+          console.warn("存檔資料複製失敗：", err);
+          return fallback;
+        }
+      }
+
+      function createSaveId() {
+        return `save_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      }
+
+      function getSnapshotSceneLabel(snapshot) {
+        if (!snapshot || !snapshot.started) {
+          return snapshot && !snapshot.inMainMenu ? "角色建立" : "主選單";
+        }
+        if (snapshot.inRiverScene) return "河邊空地";
+        if (snapshot.inHouse) return "石板屋內";
+        if (snapshot.inGranary) return "糧倉內";
+        return "戶外";
+      }
+
+      function countBy(list, predicate) {
+        return Array.isArray(list) ? list.filter(predicate).length : 0;
+      }
+
+      function describeSnapshotProgress(snapshot) {
+        if (!snapshot) return "未知進度";
+        if (!snapshot.started) {
+          return snapshot.inMainMenu ? "尚未開始" : "角色建立中";
+        }
+        if (snapshot.inRiverScene && snapshot.openingAtRiver) {
+          return `序章對話 ${Math.min(snapshot.riverIntroStep || 0, 3)} / 3`;
+        }
+        if (snapshot.inRiverScene || snapshot.inHouse || snapshot.inGranary) {
+          return "探索中";
+        }
+        if (!snapshot.blessingDone) {
+          return `祈福 ${Math.min(snapshot.blessingStep || 0, 3)} / 3`;
+        }
+        if (!snapshot.allCleared) {
+          const total = Array.isArray(snapshot.weeds) ? snapshot.weeds.length : 0;
+          const cleared = countBy(snapshot.weeds, (w) => w.cleared);
+          return `整理 ${cleared} / ${total}`;
+        }
+        if (!snapshot.landReady) {
+          return snapshot.burningTriggered ? "燃燒中" : "等待點火";
+        }
+        if (!snapshot.stoneWallBuilt) {
+          const total = Array.isArray(snapshot.stoneStacks)
+            ? snapshot.stoneStacks.length
+            : 0;
+          const done = countBy(snapshot.stoneStacks, (s) => s.done);
+          return `石牆 ${done} / ${total}`;
+        }
+        if (!snapshot.allSeeded) {
+          const total = Array.isArray(snapshot.landPlots)
+            ? snapshot.landPlots.length
+            : 0;
+          const seeded = countBy(snapshot.landPlots, (p) => p.seeded);
+          return `播種 ${seeded} / ${total}`;
+        }
+        if (!snapshot.scareReady) {
+          const total = Array.isArray(snapshot.scareDevices)
+            ? snapshot.scareDevices.length
+            : 0;
+          const placed = countBy(snapshot.scareDevices, (d) => d.placed);
+          return `器具 ${placed} / ${total}`;
+        }
+        if (!snapshot.birdPhaseDone) return `驅鳥 ${snapshot.scareCount || 0} / 5`;
+        if (!snapshot.allMature) return `生長 ${snapshot.growthStage || 0} / 3`;
+        if (!snapshot.allHarvested) {
+          return `採收 ${snapshot.harvestCount || 0} / ${snapshot.harvestTarget || 0}`;
+        }
+        if (!snapshot.allStored) {
+          return `入倉 ${snapshot.storedBundles || 0} / ${snapshot.harvestTarget || 0}`;
+        }
+        return "全部完成";
+      }
+
+      function makeDefaultSaveName(snapshot = createGameSnapshot()) {
+        const name = (snapshot.playerName || "無名之人").trim() || "無名之人";
+        return `${name}｜${describeSnapshotProgress(snapshot)}`;
+      }
+
+      function snapshotBirds() {
+        return (game.birds || []).map((bird) => ({
+          x: bird.x,
+          y: bird.y,
+          w: bird.w,
+          h: bird.h,
+          scared: !!bird.scared,
+          vy: bird.vy || 0.25,
+          targetPlotIndex: game.landPlots.indexOf(bird.target),
+        }));
+      }
+
+      function createGameSnapshot() {
+        return {
+          version: SAVE_FILE_VERSION,
+          capturedAt: new Date().toISOString(),
+          inMainMenu: game.inMainMenu,
+          started: game.started,
+          selectedGender: game.selectedGender,
+          playerName: game.playerName,
+          player: clonePlain(game.player),
+          elder: clonePlain(game.elder),
+          riverElder: clonePlain(game.riverElder),
+          weeds: clonePlain(game.weeds, []),
+          blessingDone: game.blessingDone,
+          blessingStep: game.blessingStep,
+          carrying: game.carrying,
+          allCleared: game.allCleared,
+          burningTriggered: game.burningTriggered,
+          burningProgress: game.burningProgress,
+          ashReady: game.ashReady,
+          inHouse: game.inHouse,
+          inGranary: game.inGranary,
+          inRiverScene: game.inRiverScene,
+          openingAtRiver: game.openingAtRiver,
+          riverIntroStep: game.riverIntroStep,
+          landReady: game.landReady,
+          landPlots: clonePlain(game.landPlots, []),
+          landPrepared: game.landPrepared,
+          stoneStacks: clonePlain(game.stoneStacks, []),
+          stoneWallBuilt: game.stoneWallBuilt,
+          scareDevices: clonePlain(game.scareDevices, []),
+          scareReady: game.scareReady,
+          allSeeded: game.allSeeded,
+          birds: snapshotBirds(),
+          birdTimer: game.birdTimer,
+          scareCount: game.scareCount,
+          birdPhaseDone: game.birdPhaseDone,
+          growthStarted: game.growthStarted,
+          growthProgress: game.growthProgress,
+          growthStage: game.growthStage,
+          allMature: game.allMature,
+          harvestCount: game.harvestCount,
+          harvestTarget: game.harvestTarget,
+          carryingHarvest: game.carryingHarvest,
+          carryingHarvestCrop: game.carryingHarvestCrop,
+          allHarvested: game.allHarvested,
+          storedBundles: game.storedBundles,
+          granaryStoredCrops: clonePlain(game.granaryStoredCrops, {
+            小米: 0,
+            芋頭: 0,
+            玉米: 0,
+            地瓜: 0,
+          }),
+          allStored: game.allStored,
+          camera: clonePlain(game.camera, { x: 0, y: 0 }),
+          frameCount: game.frameCount || 0,
+          masterVolume: game.masterVolume,
+          gameSpeed: game.gameSpeed,
+          storyFlags: clonePlain(game.storyFlags, {}),
+          message: game.message,
+          currentSpeaker: game.currentSpeaker,
+          currentTitle: game.currentTitle,
+          isTalking: game.isTalking,
+        };
+      }
+
+      function normalizeSaveRecords(source) {
+        let list = [];
+        if (Array.isArray(source)) {
+          list = source;
+        } else if (source && Array.isArray(source.records)) {
+          list = source.records;
+        } else if (source && typeof source === "object") {
+          list = [source];
+        }
+
+        return list
+          .map((record) => {
+            const snapshot = record.snapshot || record.gameSnapshot || record.data || null;
+            const usableSnapshot = snapshot || (record.started !== undefined ? record : null);
+            if (!usableSnapshot || typeof usableSnapshot !== "object") return null;
+
+            const normalizedSnapshot = clonePlain(usableSnapshot, null);
+            if (!normalizedSnapshot) return null;
+
+            const savedAt =
+              record.savedAt ||
+              record.updatedAt ||
+              normalizedSnapshot.capturedAt ||
+              new Date().toISOString();
+            const normalized = {
+              id: String(record.id || createSaveId()),
+              name:
+                String(record.name || "").trim() ||
+                makeDefaultSaveName(normalizedSnapshot),
+              savedAt,
+              playerName:
+                String(record.playerName || normalizedSnapshot.playerName || "無名之人").trim() ||
+                "無名之人",
+              scene: record.scene || getSnapshotSceneLabel(normalizedSnapshot),
+              progress: record.progress || describeSnapshotProgress(normalizedSnapshot),
+              snapshot: normalizedSnapshot,
+            };
+            return normalized;
+          })
+          .filter(Boolean);
+      }
+
+      function readSaveRecords() {
+        try {
+          const raw = localStorage.getItem(SAVE_STORAGE_KEY);
+          if (!raw) return [];
+          return normalizeSaveRecords(JSON.parse(raw));
+        } catch (err) {
+          console.warn("讀取本機存檔失敗：", err);
+          return [];
+        }
+      }
+
+      function writeSaveRecords(records) {
+        try {
+          localStorage.setItem(
+            SAVE_STORAGE_KEY,
+            JSON.stringify({
+              app: "rukai-millet-game",
+              version: SAVE_FILE_VERSION,
+              updatedAt: new Date().toISOString(),
+              records,
+            }),
+          );
+          return true;
+        } catch (err) {
+          console.warn("寫入本機存檔失敗：", err);
+          showSaveMessage(
+            "瀏覽器封鎖了本機儲存，但仍會嘗試下載 JSON 檔。請保留下載檔作為紀錄。",
+          );
+          return false;
+        }
+      }
+
+      function createCurrentSaveRecord(existingId = null, existingName = "") {
+        const snapshot = createGameSnapshot();
+        const typedName = (saveRecordNameInput?.value || "").trim();
+        const name = typedName || existingName || makeDefaultSaveName(snapshot);
+        const savedAt = new Date().toISOString();
+        return {
+          id: existingId || createSaveId(),
+          name,
+          savedAt,
+          playerName: snapshot.playerName || "無名之人",
+          scene: getSnapshotSceneLabel(snapshot),
+          progress: describeSnapshotProgress(snapshot),
+          snapshot,
+        };
+      }
+
+      function formatSaveTime(isoText) {
+        const date = new Date(isoText);
+        if (Number.isNaN(date.getTime())) return isoText || "未知時間";
+        return date.toLocaleString("zh-TW", { hour12: false });
+      }
+
+      function downloadSaveCollection(records) {
+        const payload = {
+          app: "rukai-millet-game",
+          version: SAVE_FILE_VERSION,
+          exportedAt: new Date().toISOString(),
+          records,
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], {
+          type: "application/json;charset=utf-8",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+        a.href = url;
+        a.download = `rukai-millet-saves-${stamp}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      function showSaveMessage(text) {
+        if (!saveMessageEl) return;
+        saveMessageEl.textContent = text || "";
+      }
+
+      function setSelectedSaveRecord(id) {
+        selectedSaveRecordId = id;
+        const record = readSaveRecords().find((r) => r.id === id);
+        if (record && saveRecordNameInput) {
+          saveRecordNameInput.value = record.name;
+        }
+        refreshSaveRecordGrid();
+      }
+
+      function refreshSaveRecordGrid(records = readSaveRecords()) {
+        if (!saveRecordGridEl) return;
+        const sorted = [...records].sort(
+          (a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime(),
+        );
+        if (saveRecordCountEl) {
+          saveRecordCountEl.textContent = `${sorted.length} 筆紀錄`;
+        }
+        saveRecordGridEl.innerHTML = "";
+
+        if (sorted.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "save-empty";
+          empty.textContent = "目前沒有紀錄。可以先新增目前進度，或上傳之前下載的 JSON 存檔。";
+          saveRecordGridEl.appendChild(empty);
+          return;
+        }
+
+        sorted.forEach((record) => {
+          const card = document.createElement("article");
+          card.className = "save-card" + (record.id === selectedSaveRecordId ? " selected" : "");
+          card.tabIndex = 0;
+
+          const title = document.createElement("div");
+          title.className = "save-card-title";
+          title.textContent = record.name;
+
+          const meta = document.createElement("div");
+          meta.className = "save-card-meta";
+          meta.innerHTML = "";
+          const metaLines = [
+            `角色：${record.playerName || "無名之人"}`,
+            `場景：${record.scene || getSnapshotSceneLabel(record.snapshot)}`,
+            `進度：${record.progress || describeSnapshotProgress(record.snapshot)}`,
+            `時間：${formatSaveTime(record.savedAt)}`,
+          ];
+          metaLines.forEach((line) => {
+            const div = document.createElement("div");
+            div.textContent = line;
+            meta.appendChild(div);
+          });
+
+          const actions = document.createElement("div");
+          actions.className = "save-card-actions";
+
+          const selectBtn = document.createElement("button");
+          selectBtn.type = "button";
+          selectBtn.textContent = "選取";
+          selectBtn.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            setSelectedSaveRecord(record.id);
+            showSaveMessage(`已選取「${record.name}」，可用覆蓋按鈕更新這一格。`);
+          });
+
+          const loadBtn = document.createElement("button");
+          loadBtn.type = "button";
+          loadBtn.textContent = "讀取";
+          loadBtn.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            loadSaveRecord(record.id);
+          });
+
+          actions.appendChild(selectBtn);
+          actions.appendChild(loadBtn);
+          card.appendChild(title);
+          card.appendChild(meta);
+          card.appendChild(actions);
+
+          card.addEventListener("click", () => {
+            setSelectedSaveRecord(record.id);
+            showSaveMessage(`已選取「${record.name}」，可用覆蓋按鈕更新這一格。`);
+          });
+          card.addEventListener("keydown", (ev) => {
+            if (ev.key === "Enter" || ev.key === " ") {
+              ev.preventDefault();
+              setSelectedSaveRecord(record.id);
+              showSaveMessage(`已選取「${record.name}」，可用覆蓋按鈕更新這一格。`);
+            }
+          });
+
+          saveRecordGridEl.appendChild(card);
+        });
+      }
+
+      function addCurrentSaveRecordAndDownload() {
+        const records = readSaveRecords();
+        const record = createCurrentSaveRecord();
+        records.unshift(record);
+        writeSaveRecords(records);
+        selectedSaveRecordId = record.id;
+        downloadSaveCollection(records);
+        refreshSaveRecordGrid(records);
+        showSaveMessage(`已新增「${record.name}」，並下載包含全部紀錄的 JSON 檔。`);
+      }
+
+      function overwriteSelectedSaveRecordAndDownload() {
+        const records = readSaveRecords();
+        if (!selectedSaveRecordId) {
+          showSaveMessage("請先在下方格子選取要覆蓋的紀錄。也可以改用新增目前進度。\u00a0");
+          return;
+        }
+        const index = records.findIndex((record) => record.id === selectedSaveRecordId);
+        if (index === -1) {
+          showSaveMessage("找不到剛才選取的紀錄，請重新選取一格。\u00a0");
+          return;
+        }
+        const record = createCurrentSaveRecord(records[index].id, records[index].name);
+        records[index] = record;
+        writeSaveRecords(records);
+        downloadSaveCollection(records);
+        refreshSaveRecordGrid(records);
+        showSaveMessage(`已覆蓋「${record.name}」，並下載更新後的 JSON 檔。`);
+      }
+
+      function downloadAllSaveRecords() {
+        const records = readSaveRecords();
+        if (records.length === 0) {
+          showSaveMessage("目前沒有任何紀錄可以下載。\u00a0");
+          return;
+        }
+        downloadSaveCollection(records);
+        showSaveMessage(`已下載 ${records.length} 筆紀錄。`);
+      }
+
+      function importSaveRecordsFromFile(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const imported = normalizeSaveRecords(JSON.parse(String(reader.result || "{}")));
+            if (imported.length === 0) {
+              showSaveMessage("這個檔案沒有可讀取的存檔紀錄。\u00a0");
+              return;
+            }
+
+            const existing = readSaveRecords();
+            const byId = new Map(existing.map((record) => [record.id, record]));
+            let added = 0;
+            let updated = 0;
+
+            imported.forEach((record) => {
+              if (!record.id) record.id = createSaveId();
+              if (byId.has(record.id)) updated++;
+              else added++;
+              byId.set(record.id, record);
+            });
+
+            const merged = [...byId.values()].sort(
+              (a, b) =>
+                new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime(),
+            );
+            writeSaveRecords(merged);
+            selectedSaveRecordId = imported[0].id;
+            refreshSaveRecordGrid(merged);
+            showSaveMessage(
+              `上傳完成：新增 ${added} 筆、更新 ${updated} 筆。每筆紀錄已顯示在下方格子中。`,
+            );
+          } catch (err) {
+            console.warn("匯入存檔失敗：", err);
+            showSaveMessage("讀取失敗，請確認上傳的是本遊戲下載的 JSON 存檔。\u00a0");
+          } finally {
+            if (saveFileInput) saveFileInput.value = "";
+          }
+        };
+        reader.readAsText(file, "utf-8");
+      }
+
+      function restoreBirds(savedBirds) {
+        if (!Array.isArray(savedBirds)) return [];
+        return savedBirds.map((bird) => {
+          const target = game.landPlots[bird.targetPlotIndex] || game.landPlots.find((p) => p.seeded) || null;
+          return {
+            x: bird.x || 0,
+            y: bird.y || 0,
+            w: bird.w || 12,
+            h: bird.h || 8,
+            scared: !!bird.scared,
+            vy: bird.vy || 0.25,
+            target,
+          };
+        }).filter((bird) => !!bird.target || bird.scared);
+      }
+
+      function assignIfPresent(snapshot, key) {
+        if (Object.prototype.hasOwnProperty.call(snapshot, key)) {
+          game[key] = snapshot[key];
+        }
+      }
+
+      function applyGameSnapshot(snapshot) {
+        const safe = clonePlain(snapshot, null);
+        if (!safe || typeof safe !== "object") {
+          showSaveMessage("這筆紀錄沒有可讀取的遊戲資料。\u00a0");
+          return false;
+        }
+
+        init();
+        stopIndoorSong();
+
+        const scalarKeys = [
+          "inMainMenu",
+          "started",
+          "selectedGender",
+          "playerName",
+          "blessingDone",
+          "blessingStep",
+          "carrying",
+          "allCleared",
+          "burningTriggered",
+          "burningProgress",
+          "ashReady",
+          "inHouse",
+          "inGranary",
+          "inRiverScene",
+          "openingAtRiver",
+          "riverIntroStep",
+          "landReady",
+          "landPrepared",
+          "stoneWallBuilt",
+          "scareReady",
+          "allSeeded",
+          "birdTimer",
+          "scareCount",
+          "birdPhaseDone",
+          "growthStarted",
+          "growthProgress",
+          "growthStage",
+          "allMature",
+          "harvestCount",
+          "harvestTarget",
+          "carryingHarvest",
+          "carryingHarvestCrop",
+          "allHarvested",
+          "storedBundles",
+          "allStored",
+          "frameCount",
+          "masterVolume",
+          "gameSpeed",
+          "message",
+          "currentSpeaker",
+          "currentTitle",
+          "isTalking",
+        ];
+        scalarKeys.forEach((key) => assignIfPresent(safe, key));
+
+        if (safe.player) game.player = { ...game.player, ...safe.player };
+        if (safe.elder) game.elder = { ...game.elder, ...safe.elder };
+        if (safe.riverElder && game.riverElder) {
+          game.riverElder = { ...game.riverElder, ...safe.riverElder };
+        }
+        if (Array.isArray(safe.weeds)) game.weeds = safe.weeds;
+        if (Array.isArray(safe.landPlots)) game.landPlots = safe.landPlots;
+        if (Array.isArray(safe.stoneStacks)) game.stoneStacks = safe.stoneStacks;
+        if (Array.isArray(safe.scareDevices)) game.scareDevices = safe.scareDevices;
+        if (safe.granaryStoredCrops) {
+          game.granaryStoredCrops = {
+            小米: 0,
+            芋頭: 0,
+            玉米: 0,
+            地瓜: 0,
+            ...safe.granaryStoredCrops,
+          };
+        }
+        if (safe.storyFlags) game.storyFlags = { ...game.storyFlags, ...safe.storyFlags };
+        if (safe.camera) game.camera = { ...game.camera, ...safe.camera };
+
+        if (game.landReady && game.landPlots.length === 0) {
+          setupLandPlots();
+        }
+        if (game.allSeeded && game.scareDevices.length === 0) {
+          setupScareDevices();
+        }
+
+        game.birds = restoreBirds(safe.birds);
+        game.seedMenuOpen = false;
+        game.seedMenuPlot = null;
+        game.settingsOpen = false;
+        game.selectedSettingRow = 0;
+        game.currentIndoorAudio = null;
+        if (game.started) game.inMainMenu = false;
+
+        applyAudioSettings();
+        updateCamera();
+        updateUI();
+        refreshDialogueUI();
+        return true;
+      }
+
+      function loadSaveRecord(recordId) {
+        const record = readSaveRecords().find((item) => item.id === recordId);
+        if (!record) {
+          showSaveMessage("找不到這筆紀錄。\u00a0");
+          return;
+        }
+        const ok = applyGameSnapshot(record.snapshot);
+        if (!ok) return;
+        selectedSaveRecordId = record.id;
+        closeSaveManager();
+        if (game.started) {
+          setMessage(`已讀取存檔「${record.name}」。`);
+          resumeBackgroundMusic();
+        }
+      }
+
+      function openSaveManager() {
+        if (!saveOverlayEl) return;
+        const currentSnapshot = createGameSnapshot();
+        selectedSaveRecordId = null;
+        if (saveRecordNameInput) {
+          saveRecordNameInput.value = makeDefaultSaveName(currentSnapshot);
+        }
+        saveOverlayEl.classList.add("active");
+        saveOverlayEl.setAttribute("aria-hidden", "false");
+        refreshSaveRecordGrid();
+        showSaveMessage("選擇新增會建立新格子；先選取一格後可覆蓋。每次新增或覆蓋都會下載最新 JSON。\u00a0");
+        keys[" "] = false;
+        canPressInteract = false;
+        setTimeout(() => saveRecordNameInput?.focus(), 0);
+      }
+
+      function closeSaveManager() {
+        if (!saveOverlayEl) return;
+        saveOverlayEl.classList.remove("active");
+        saveOverlayEl.setAttribute("aria-hidden", "true");
+        keys[" "] = false;
+        canPressInteract = false;
+        setTimeout(() => {
+          canPressInteract = true;
+        }, 120);
       }
 
       const ELDER_SPOTS = {
@@ -3549,7 +4488,7 @@
           }
         }
 
-        if (game.started && !game.settingsOpen) {
+        if (game.started && !game.settingsOpen && !isSaveManagerOpen()) {
           game.frameCount++;
           movePlayer();
           if (game.inHouse && game.currentIndoorAudio) {
@@ -3622,6 +4561,10 @@
       function render() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         topbarEl.style.display = game.started ? "flex" : "none";
+        if (saveQuickActionsEl) {
+          saveQuickActionsEl.style.display =
+            game.started && !isSaveManagerOpen() ? "flex" : "none";
+        }
 
         if (!game.started) {
           if (game.inMainMenu) {
@@ -6913,7 +7856,7 @@
         ctx.shadowOffsetY = 0;
 
         // Buttons
-        const menus = ["新的旅途", "記憶回溯", "圖鑑", "設定", "退出"];
+        const menus = ["新的旅途", "存檔管理", "圖鑑", "設定", "退出"];
         const btnW = 280;
         const btnH = 48;
         const startY = 320;
@@ -7103,6 +8046,21 @@
           img.src = ASSETS_TO_LOAD[k];
         });
       }
+
+
+
+      openSaveManagerBtn?.addEventListener("click", openSaveManager);
+      saveCloseBtn?.addEventListener("click", closeSaveManager);
+      saveOverlayEl?.addEventListener("click", (e) => {
+        if (e.target === saveOverlayEl) closeSaveManager();
+      });
+      saveAddBtn?.addEventListener("click", addCurrentSaveRecordAndDownload);
+      saveOverwriteBtn?.addEventListener("click", overwriteSelectedSaveRecordAndDownload);
+      saveDownloadBtn?.addEventListener("click", downloadAllSaveRecords);
+      saveUploadBtn?.addEventListener("click", () => saveFileInput?.click());
+      saveFileInput?.addEventListener("change", (e) => {
+        importSaveRecordsFromFile(e.target.files?.[0]);
+      });
 
       loadAssets(() => {
         init();
