@@ -425,12 +425,13 @@
           <div class="text" id="dialogueText">
             使用方向鍵或 WASD 移動，靠近人物或地點後按空白鍵互動。
           </div>
-          <div class="hint">操作：移動 / 空白鍵互動 / R 重新開始</div>
+          <div class="hint">操作：移動 / 空白鍵互動 / B 背包 / Ctrl+S 存檔 / R 重新開始</div>
         </div>
       </div>
 
 
-      <div id="saveQuickActions" class="save-quick-actions" aria-label="存檔功能">
+      <div id="saveQuickActions" class="save-quick-actions" aria-label="快捷功能">
+        <button id="openInventoryBtn" type="button">背包 (B)</button>
         <button id="openSaveManagerBtn" type="button">存檔 / 上傳</button>
       </div>
 
@@ -484,6 +485,7 @@
       const topbarEl = document.getElementById("topbar");
 
       const saveQuickActionsEl = document.getElementById("saveQuickActions");
+      const openInventoryBtn = document.getElementById("openInventoryBtn");
       const openSaveManagerBtn = document.getElementById("openSaveManagerBtn");
       const saveOverlayEl = document.getElementById("saveOverlay");
       const saveCloseBtn = document.getElementById("saveCloseBtn");
@@ -524,6 +526,18 @@
             e.preventDefault();
             closeSaveManager();
           }
+          return;
+        }
+
+        if (game.inventoryOpen) {
+          e.preventDefault();
+          handleInventoryKey(k);
+          return;
+        }
+
+        if (game.started && (k === "b" || k === "i")) {
+          e.preventDefault();
+          toggleInventory();
           return;
         }
 
@@ -678,6 +692,11 @@
       });
 
       canvas.addEventListener("click", (e) => {
+        if (game.started && game.inventoryOpen) {
+          handleInventoryClick(e);
+          return;
+        }
+
         if (!game.started && game.inMainMenu) {
           const rect = canvas.getBoundingClientRect();
           const scaleX = canvas.width / rect.width;
@@ -741,13 +760,18 @@
         landReady: false,
         landPlots: [],
         landPrepared: false,
-        cropTypes: ["小米", "芋頭", "玉米", "地瓜"],
+        cropTypes: ["小米", "玉米", "芋頭", "地瓜"],
         seedMenuOpen: false,
         seedMenuPlot: null,
         settingsOpen: false,
         masterVolume: 70,
         gameSpeed: 100,
         selectedSettingRow: 0,
+
+        inventoryOpen: false,
+        selectedInventorySlot: 0,
+        inventory: [],
+        money: 0,
 
         stoneStacks: [],
         stoneWallBuilt: false,
@@ -990,6 +1014,7 @@
       function toggleSettingsMenu() {
         game.settingsOpen = !game.settingsOpen;
         if (game.settingsOpen) {
+          game.inventoryOpen = false;
           keys[" "] = false;
           canPressInteract = false;
         }
@@ -1008,7 +1033,466 @@
       }
 
 
-      const SAVE_FILE_VERSION = 1;
+      const INVENTORY_COLS = 4;
+      const INVENTORY_ROWS = 3;
+      const INVENTORY_SIZE = INVENTORY_COLS * INVENTORY_ROWS;
+
+      const INVENTORY_ITEM_DEFS = {
+        milletSeed: {
+          name: "小米種子",
+          short: "小米",
+          icon: "種",
+          color: "#d4b34d",
+          desc: "播種小米用的種子。",
+        },
+        cornSeed: {
+          name: "玉米種子",
+          short: "玉米",
+          icon: "玉",
+          color: "#d1ac42",
+          desc: "播種玉米用的種子。",
+        },
+        taroSeed: {
+          name: "芋頭種芋",
+          short: "芋頭",
+          icon: "芋",
+          color: "#7b5c3a",
+          desc: "播種芋頭用的種芋。",
+        },
+        sweetPotatoSeed: {
+          name: "地瓜藤苗",
+          short: "地瓜",
+          icon: "藤",
+          color: "#a75c34",
+          desc: "栽種地瓜用的藤苗。",
+        },
+        brushBundle: {
+          name: "草木束",
+          short: "草木",
+          icon: "草",
+          color: "#6da34f",
+          desc: "整理山田時集中起來的草木。",
+        },
+        wildFlower: {
+          name: "野花",
+          short: "野花",
+          icon: "花",
+          color: "#d48ab3",
+          desc: "從草叢旁小心保留下來的野花。",
+        },
+        oldStone: {
+          name: "舊石片",
+          short: "石片",
+          icon: "石",
+          color: "#a7a39a",
+          desc: "草叢下露出的舊田地石片。",
+        },
+        feather: {
+          name: "掉落羽毛",
+          short: "羽毛",
+          icon: "羽",
+          color: "#d8d8d8",
+          desc: "你避開小鳥巢後，拾起的一片掉落羽毛。",
+        },
+        harvestMillet: {
+          name: "小米收成",
+          short: "小米",
+          icon: "穗",
+          color: "#d4b34d",
+          desc: "剛採收下來的小米，適合送進糧倉。",
+        },
+        harvestCorn: {
+          name: "玉米收成",
+          short: "玉米",
+          icon: "苞",
+          color: "#d1ac42",
+          desc: "剛採收下來的玉米，適合送進糧倉。",
+        },
+        harvestTaro: {
+          name: "芋頭收成",
+          short: "芋頭",
+          icon: "芋",
+          color: "#7b5c3a",
+          desc: "剛採收下來的芋頭，適合送進糧倉。",
+        },
+        harvestSweetPotato: {
+          name: "地瓜收成",
+          short: "地瓜",
+          icon: "薯",
+          color: "#a75c34",
+          desc: "剛採收下來的地瓜，適合送進糧倉。",
+        },
+      };
+
+      const CROP_SEED_ITEM_IDS = {
+        小米: "milletSeed",
+        玉米: "cornSeed",
+        芋頭: "taroSeed",
+        地瓜: "sweetPotatoSeed",
+      };
+
+      const CROP_HARVEST_ITEM_IDS = {
+        小米: "harvestMillet",
+        玉米: "harvestCorn",
+        芋頭: "harvestTaro",
+        地瓜: "harvestSweetPotato",
+      };
+
+      const CROP_MONEY_VALUES = {
+        小米: 18,
+        玉米: 14,
+        芋頭: 12,
+        地瓜: 10,
+      };
+
+      function makeEmptyInventory() {
+        return Array.from({ length: INVENTORY_SIZE }, () => null);
+      }
+
+      function normalizeInventory(slots) {
+        const normalized = makeEmptyInventory();
+        if (!Array.isArray(slots)) return normalized;
+
+        slots.slice(0, INVENTORY_SIZE).forEach((slot, index) => {
+          if (!slot || !slot.id || !INVENTORY_ITEM_DEFS[slot.id]) return;
+          const qty = Math.max(1, Math.floor(Number(slot.qty) || 1));
+          normalized[index] = { id: slot.id, qty };
+        });
+        return normalized;
+      }
+
+      function createDefaultInventory() {
+        const slots = makeEmptyInventory();
+        slots[0] = { id: "milletSeed", qty: 12 };
+        slots[1] = { id: "cornSeed", qty: 12 };
+        slots[2] = { id: "taroSeed", qty: 12 };
+        slots[3] = { id: "sweetPotatoSeed", qty: 12 };
+        return slots;
+      }
+
+      function ensureInventoryReady() {
+        if (!Array.isArray(game.inventory) || game.inventory.length !== INVENTORY_SIZE) {
+          game.inventory = normalizeInventory(game.inventory);
+        }
+        game.money = Math.max(0, Math.floor(Number(game.money) || 0));
+        game.selectedInventorySlot = clamp(
+          Math.floor(Number(game.selectedInventorySlot) || 0),
+          0,
+          INVENTORY_SIZE - 1,
+        );
+      }
+
+      function hasInventoryItem(itemId, qty = 1) {
+        ensureInventoryReady();
+        return game.inventory.some(
+          (slot) => slot && slot.id === itemId && slot.qty >= qty,
+        );
+      }
+
+      function addItemToInventory(itemId, qty = 1) {
+        ensureInventoryReady();
+        if (!INVENTORY_ITEM_DEFS[itemId]) return false;
+        let remaining = Math.max(1, Math.floor(Number(qty) || 1));
+
+        for (const slot of game.inventory) {
+          if (slot && slot.id === itemId) {
+            slot.qty += remaining;
+            return true;
+          }
+        }
+
+        const emptyIndex = game.inventory.findIndex((slot) => !slot);
+        if (emptyIndex === -1) return false;
+        game.inventory[emptyIndex] = { id: itemId, qty: remaining };
+        return true;
+      }
+
+      function removeItemFromInventory(itemId, qty = 1) {
+        ensureInventoryReady();
+        let remaining = Math.max(1, Math.floor(Number(qty) || 1));
+
+        for (let i = 0; i < game.inventory.length && remaining > 0; i++) {
+          const slot = game.inventory[i];
+          if (!slot || slot.id !== itemId) continue;
+          const used = Math.min(slot.qty, remaining);
+          slot.qty -= used;
+          remaining -= used;
+          if (slot.qty <= 0) game.inventory[i] = null;
+        }
+
+        return remaining === 0;
+      }
+
+      function getCropSeedItemId(cropType) {
+        return CROP_SEED_ITEM_IDS[cropType] || null;
+      }
+
+      function getCropHarvestItemId(cropType) {
+        return CROP_HARVEST_ITEM_IDS[cropType] || null;
+      }
+
+      function getCropMoneyValue(cropType) {
+        return CROP_MONEY_VALUES[cropType] || 0;
+      }
+
+      function getInventoryUsedSlots(slots = game.inventory) {
+        return Array.isArray(slots) ? slots.filter(Boolean).length : 0;
+      }
+
+      function getInventorySummary(slots = game.inventory, money = game.money) {
+        const used = getInventoryUsedSlots(slots);
+        return `背包：${used} / ${INVENTORY_SIZE}｜金錢：${Math.max(0, Math.floor(Number(money) || 0))} 貝幣`;
+      }
+
+      function toggleInventory(force = null) {
+        if (!game.started) return;
+        game.inventoryOpen = force === null ? !game.inventoryOpen : !!force;
+        if (game.inventoryOpen) {
+          ensureInventoryReady();
+          game.settingsOpen = false;
+          keys[" "] = false;
+          canPressInteract = false;
+        } else {
+          keys[" "] = false;
+          canPressInteract = false;
+          setTimeout(() => {
+            canPressInteract = true;
+          }, 120);
+        }
+        updateUI();
+      }
+
+      function handleInventoryKey(k) {
+        if (k === "escape" || k === "Escape" || k === "b" || k === "i") {
+          toggleInventory(false);
+          return;
+        }
+        ensureInventoryReady();
+        const col = game.selectedInventorySlot % INVENTORY_COLS;
+        const row = Math.floor(game.selectedInventorySlot / INVENTORY_COLS);
+        if (k === "ArrowLeft" || k === "arrowleft" || k === "a") {
+          game.selectedInventorySlot = row * INVENTORY_COLS + ((col - 1 + INVENTORY_COLS) % INVENTORY_COLS);
+        } else if (k === "ArrowRight" || k === "arrowright" || k === "d") {
+          game.selectedInventorySlot = row * INVENTORY_COLS + ((col + 1) % INVENTORY_COLS);
+        } else if (k === "ArrowUp" || k === "arrowup" || k === "w") {
+          game.selectedInventorySlot = ((row - 1 + INVENTORY_ROWS) % INVENTORY_ROWS) * INVENTORY_COLS + col;
+        } else if (k === "ArrowDown" || k === "arrowdown" || k === "s") {
+          game.selectedInventorySlot = ((row + 1) % INVENTORY_ROWS) * INVENTORY_COLS + col;
+        }
+      }
+
+      function getInventoryPanelGeometry() {
+        const slotSize = 86;
+        const gap = 12;
+        const gridW = INVENTORY_COLS * slotSize + (INVENTORY_COLS - 1) * gap;
+        const gridH = INVENTORY_ROWS * slotSize + (INVENTORY_ROWS - 1) * gap;
+        const panelW = 760;
+        const panelH = 450;
+        const panelX = (canvas.width - panelW) / 2;
+        const panelY = (canvas.height - panelH) / 2;
+        const gridX = panelX + 34;
+        const gridY = panelY + 122;
+        return { panelX, panelY, panelW, panelH, gridX, gridY, gridW, gridH, slotSize, gap };
+      }
+
+      function handleInventoryClick(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
+        const g = getInventoryPanelGeometry();
+
+        for (let row = 0; row < INVENTORY_ROWS; row++) {
+          for (let col = 0; col < INVENTORY_COLS; col++) {
+            const index = row * INVENTORY_COLS + col;
+            const sx = g.gridX + col * (g.slotSize + g.gap);
+            const sy = g.gridY + row * (g.slotSize + g.gap);
+            if (x >= sx && x <= sx + g.slotSize && y >= sy && y <= sy + g.slotSize) {
+              game.selectedInventorySlot = index;
+              return;
+            }
+          }
+        }
+
+        const closeX = g.panelX + g.panelW - 58;
+        const closeY = g.panelY + 18;
+        if (x >= closeX && x <= closeX + 36 && y >= closeY && y <= closeY + 36) {
+          toggleInventory(false);
+        }
+      }
+
+      function drawInventoryItemIcon(itemId, x, y, size) {
+        const def = INVENTORY_ITEM_DEFS[itemId];
+        if (!def) return;
+        ctx.fillStyle = def.color || "#d8c28a";
+        ctx.beginPath();
+        ctx.arc(x + size / 2, y + size / 2 - 4, size * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "rgba(35, 24, 12, 0.75)";
+        ctx.beginPath();
+        ctx.arc(x + size / 2, y + size / 2 - 4, size * 0.19, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#fff7de";
+        ctx.font = "bold 22px Noto Sans TC, Microsoft JhengHei, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(def.icon || def.short || "物", x + size / 2, y + size / 2 - 4);
+      }
+
+      function drawInventoryPanel() {
+        if (!game.inventoryOpen) return;
+        ensureInventoryReady();
+        const g = getInventoryPanelGeometry();
+
+        ctx.save();
+        ctx.fillStyle = "rgba(0, 0, 0, 0.48)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "rgba(35, 24, 12, 0.98)";
+        roundRect(ctx, g.panelX, g.panelY, g.panelW, g.panelH, 24);
+        ctx.fill();
+
+        ctx.strokeStyle = "#e6c98a";
+        ctx.lineWidth = 4;
+        roundRect(ctx, g.panelX, g.panelY, g.panelW, g.panelH, 24);
+        ctx.stroke();
+
+        ctx.fillStyle = "#ffd27d";
+        ctx.font = "bold 34px Noto Sans TC, Microsoft JhengHei, sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillText("背包", g.panelX + 34, g.panelY + 58);
+
+        ctx.fillStyle = "#ffebb9";
+        ctx.font = "bold 18px Noto Sans TC, Microsoft JhengHei, sans-serif";
+        ctx.fillText(`金錢：${game.money} 貝幣`, g.panelX + 34, g.panelY + 92);
+        ctx.fillText(`容量：${getInventoryUsedSlots()} / ${INVENTORY_SIZE}`, g.panelX + 220, g.panelY + 92);
+
+        ctx.fillStyle = "rgba(60, 34, 18, 0.95)";
+        roundRect(ctx, g.panelX + g.panelW - 58, g.panelY + 18, 36, 36, 10);
+        ctx.fill();
+        ctx.strokeStyle = "#e6c98a";
+        ctx.lineWidth = 2;
+        roundRect(ctx, g.panelX + g.panelW - 58, g.panelY + 18, 36, 36, 10);
+        ctx.stroke();
+        ctx.fillStyle = "#fff7de";
+        ctx.font = "bold 24px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("×", g.panelX + g.panelW - 40, g.panelY + 36);
+
+        for (let row = 0; row < INVENTORY_ROWS; row++) {
+          for (let col = 0; col < INVENTORY_COLS; col++) {
+            const index = row * INVENTORY_COLS + col;
+            const sx = g.gridX + col * (g.slotSize + g.gap);
+            const sy = g.gridY + row * (g.slotSize + g.gap);
+            const selected = index === game.selectedInventorySlot;
+            const slot = game.inventory[index];
+
+            ctx.fillStyle = selected ? "rgba(96, 58, 24, 0.94)" : "rgba(18, 12, 7, 0.74)";
+            roundRect(ctx, sx, sy, g.slotSize, g.slotSize, 14);
+            ctx.fill();
+
+            ctx.strokeStyle = selected ? "#ffd27d" : "rgba(230, 201, 138, 0.52)";
+            ctx.lineWidth = selected ? 4 : 2;
+            roundRect(ctx, sx, sy, g.slotSize, g.slotSize, 14);
+            ctx.stroke();
+
+            if (slot) {
+              const def = INVENTORY_ITEM_DEFS[slot.id];
+              drawInventoryItemIcon(slot.id, sx + 12, sy + 8, 56);
+
+              ctx.fillStyle = "#fff7de";
+              ctx.font = "bold 13px Noto Sans TC, Microsoft JhengHei, sans-serif";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "alphabetic";
+              ctx.fillText(def?.short || def?.name || "物品", sx + g.slotSize / 2, sy + 70);
+
+              if (slot.qty > 1) {
+                ctx.fillStyle = "rgba(35, 24, 12, 0.9)";
+                roundRect(ctx, sx + g.slotSize - 34, sy + g.slotSize - 26, 28, 20, 6);
+                ctx.fill();
+                ctx.strokeStyle = "rgba(230, 201, 138, 0.75)";
+                ctx.lineWidth = 1;
+                roundRect(ctx, sx + g.slotSize - 34, sy + g.slotSize - 26, 28, 20, 6);
+                ctx.stroke();
+                ctx.fillStyle = "#fff7de";
+                ctx.font = "bold 13px sans-serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(String(slot.qty), sx + g.slotSize - 20, sy + g.slotSize - 16);
+              }
+            } else {
+              ctx.fillStyle = "rgba(255, 247, 222, 0.16)";
+              ctx.font = "bold 13px Noto Sans TC, Microsoft JhengHei, sans-serif";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText("空格", sx + g.slotSize / 2, sy + g.slotSize / 2);
+            }
+          }
+        }
+
+        const infoX = g.gridX + g.gridW + 34;
+        const infoY = g.gridY;
+        const infoW = g.panelX + g.panelW - infoX - 34;
+        const selectedSlot = game.inventory[game.selectedInventorySlot];
+        ctx.fillStyle = "rgba(18, 12, 7, 0.56)";
+        roundRect(ctx, infoX, infoY, infoW, g.gridH, 16);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(230, 201, 138, 0.45)";
+        ctx.lineWidth = 2;
+        roundRect(ctx, infoX, infoY, infoW, g.gridH, 16);
+        ctx.stroke();
+
+        ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
+        if (selectedSlot) {
+          const def = INVENTORY_ITEM_DEFS[selectedSlot.id];
+          ctx.fillStyle = "#ffd27d";
+          ctx.font = "bold 24px Noto Sans TC, Microsoft JhengHei, sans-serif";
+          ctx.fillText(def.name, infoX + 18, infoY + 38);
+          ctx.fillStyle = "#fff7de";
+          ctx.font = "bold 18px Noto Sans TC, Microsoft JhengHei, sans-serif";
+          ctx.fillText(`數量：${selectedSlot.qty}`, infoX + 18, infoY + 72);
+          ctx.fillStyle = "#ffebb9";
+          ctx.font = "16px Noto Sans TC, Microsoft JhengHei, sans-serif";
+          wrapCanvasText(def.desc || "沒有說明。", infoX + 18, infoY + 108, infoW - 36, 26);
+        } else {
+          ctx.fillStyle = "#ffd27d";
+          ctx.font = "bold 24px Noto Sans TC, Microsoft JhengHei, sans-serif";
+          ctx.fillText("空格", infoX + 18, infoY + 38);
+          ctx.fillStyle = "#ffebb9";
+          ctx.font = "16px Noto Sans TC, Microsoft JhengHei, sans-serif";
+          wrapCanvasText("這一格目前沒有物品。採集、播種、採收或入倉時，物品會自動更新。", infoX + 18, infoY + 76, infoW - 36, 26);
+        }
+
+        ctx.fillStyle = "#ffebb9";
+        ctx.font = "14px Noto Sans TC, Microsoft JhengHei, sans-serif";
+        ctx.fillText("操作：B / I / Esc 關閉｜方向鍵選擇格子｜滑鼠可點選格子", g.panelX + 34, g.panelY + g.panelH - 28);
+        ctx.restore();
+      }
+
+      function wrapCanvasText(text, x, y, maxWidth, lineHeight) {
+        const chars = String(text || "").split("");
+        let line = "";
+        for (const ch of chars) {
+          const test = line + ch;
+          if (ctx.measureText(test).width > maxWidth && line) {
+            ctx.fillText(line, x, y);
+            line = ch;
+            y += lineHeight;
+          } else {
+            line = test;
+          }
+        }
+        if (line) ctx.fillText(line, x, y);
+      }
+
+
+      const SAVE_FILE_VERSION = 2;
       const SAVE_STORAGE_KEY = "rukaiMilletSaveRecordsV1";
       let selectedSaveRecordId = null;
 
@@ -1172,6 +1656,9 @@
           frameCount: game.frameCount || 0,
           masterVolume: game.masterVolume,
           gameSpeed: game.gameSpeed,
+          inventory: clonePlain(game.inventory, makeEmptyInventory()),
+          selectedInventorySlot: game.selectedInventorySlot || 0,
+          money: game.money || 0,
           storyFlags: clonePlain(game.storyFlags, {}),
           message: game.message,
           currentSpeaker: game.currentSpeaker,
@@ -1345,6 +1832,7 @@
             `角色：${record.playerName || "無名之人"}`,
             `場景：${record.scene || getSnapshotSceneLabel(record.snapshot)}`,
             `進度：${record.progress || describeSnapshotProgress(record.snapshot)}`,
+            getInventorySummary(record.snapshot?.inventory, record.snapshot?.money),
             `時間：${formatSaveTime(record.savedAt)}`,
           ];
           metaLines.forEach((line) => {
@@ -1549,6 +2037,8 @@
           "frameCount",
           "masterVolume",
           "gameSpeed",
+          "money",
+          "selectedInventorySlot",
           "message",
           "currentSpeaker",
           "currentTitle",
@@ -1574,6 +2064,12 @@
             ...safe.granaryStoredCrops,
           };
         }
+        if (Array.isArray(safe.inventory)) {
+          game.inventory = normalizeInventory(safe.inventory);
+        } else {
+          game.inventory = normalizeInventory(game.inventory);
+        }
+        game.money = Math.max(0, Math.floor(Number(game.money) || 0));
         if (safe.storyFlags) game.storyFlags = { ...game.storyFlags, ...safe.storyFlags };
         if (safe.camera) game.camera = { ...game.camera, ...safe.camera };
 
@@ -1587,6 +2083,7 @@
         game.birds = restoreBirds(safe.birds);
         game.seedMenuOpen = false;
         game.seedMenuPlot = null;
+        game.inventoryOpen = false;
         game.settingsOpen = false;
         game.selectedSettingRow = 0;
         game.currentIndoorAudio = null;
@@ -1617,6 +2114,7 @@
 
       function openSaveManager() {
         if (!saveOverlayEl) return;
+        game.inventoryOpen = false;
         const currentSnapshot = createGameSnapshot();
         selectedSaveRecordId = null;
         if (saveRecordNameInput) {
@@ -1854,6 +2352,10 @@
         game.frameCount = 0;
         game.settingsOpen = false;
         game.selectedSettingRow = 0;
+        game.inventoryOpen = false;
+        game.selectedInventorySlot = 0;
+        game.inventory = createDefaultInventory();
+        game.money = 0;
         game.message = "";
         game.currentSpeaker = "system";
         game.currentTitle = "魯凱族山田燒墾";
@@ -2659,6 +3161,14 @@
 
         const plot = game.seedMenuPlot;
         const crop = game.cropTypes[idx];
+        const seedItemId = getCropSeedItemId(crop);
+
+        if (seedItemId && !hasInventoryItem(seedItemId, 1)) {
+          setMessage(`背包裡沒有${INVENTORY_ITEM_DEFS[seedItemId].name}，暫時不能種${crop}。`, "背包");
+          return;
+        }
+
+        if (seedItemId) removeItemFromInventory(seedItemId, 1);
 
         plot.seeded = true;
         plot.cropType = crop;
@@ -2948,6 +3458,11 @@
         const storedCrop = game.carryingHarvestCrop;
         if (!storedCrop) return;
 
+        const harvestItemId = getCropHarvestItemId(storedCrop);
+        if (harvestItemId) removeItemFromInventory(harvestItemId, 1);
+        const earnedMoney = getCropMoneyValue(storedCrop);
+        game.money += earnedMoney;
+
         game.carryingHarvest = false;
         game.carryingHarvestCrop = null;
         game.storedBundles++;
@@ -2958,12 +3473,12 @@
 
         if (game.storedBundles < game.harvestTarget) {
           setMessage(
-            `你把${storedCrop}放進糧倉。入倉進度：${game.storedBundles} / ${game.harvestTarget}`,
+            `你把${storedCrop}放進糧倉，獲得 ${earnedMoney} 貝幣。入倉進度：${game.storedBundles} / ${game.harvestTarget}`,
           );
         } else {
           game.allStored = true;
           moveElderTo("storageGuide");
-          setDialogue("作物都已經入倉了。今年的田地總算有了收成。", "elder");
+          setDialogue(`作物都已經入倉了。今年的田地總算有了收成，也累積了 ${game.money} 貝幣。`, "elder");
         }
 
         updateUI();
@@ -3337,18 +3852,22 @@
           if (weed) {
             weed.cleared = true;
             game.carrying = true;
+            addItemToInventory("brushBundle", 1);
 
             if (weed.kind === "wildflower") {
+              addItemToInventory("wildFlower", 1);
               setMessage(
                 "你在草叢裡發現一小束野花。你小心把它放到一旁，再把雜草帶去堆置區。",
               );
             } else if (weed.kind === "stone") {
+              addItemToInventory("oldStone", 1);
               setMessage(
                 "草叢下露出一塊特別的石片，像是舊田地留下的痕跡。你記住了這個地方，再把草木搬去堆置區。",
               );
             } else if (weed.kind === "nest") {
+              addItemToInventory("feather", 1);
               setMessage(
-                "你差點碰到一個小鳥巢，趕緊避開，把旁邊的雜草整理好後帶去堆置區。",
+                "你差點碰到一個小鳥巢，趕緊避開，只拾起一片掉落羽毛，再把旁邊的雜草整理好後帶去堆置區。",
               );
             } else {
               setMessage("你砍下並整理了一份雜草／矮樹。把它帶到堆置區。");
@@ -3526,6 +4045,12 @@
           const plot = getNearbyHarvestPlot();
 
           if (plot) {
+            const harvestItemId = getCropHarvestItemId(plot.cropType);
+            if (harvestItemId && !addItemToInventory(harvestItemId, 1)) {
+              setMessage("背包已滿，先整理背包或把身上的收成送進糧倉後再採收。", "背包");
+              return;
+            }
+
             plot.harvested = true;
             plot.mature = false;
             game.carryingHarvest = true;
@@ -4476,7 +5001,11 @@
           statusText += "｜全部完成";
         }
 
+        statusText += `｜金錢：${game.money || 0} 貝幣`;
         statusEl.textContent = statusText;
+        if (openInventoryBtn) {
+          openInventoryBtn.textContent = `背包 B / I｜${game.money || 0} 貝幣`;
+        }
         refreshDialogueUI();
       }
 
@@ -4488,7 +5017,7 @@
           }
         }
 
-        if (game.started && !game.settingsOpen && !isSaveManagerOpen()) {
+        if (game.started && !game.settingsOpen && !game.inventoryOpen && !isSaveManagerOpen()) {
           game.frameCount++;
           movePlayer();
           if (game.inHouse && game.currentIndoorAudio) {
@@ -4563,7 +5092,7 @@
         topbarEl.style.display = game.started ? "flex" : "none";
         if (saveQuickActionsEl) {
           saveQuickActionsEl.style.display =
-            game.started && !isSaveManagerOpen() ? "flex" : "none";
+            game.started && !game.inventoryOpen && !isSaveManagerOpen() ? "flex" : "none";
         }
 
         if (!game.started) {
@@ -4667,6 +5196,10 @@
         }
 
         drawAtmosphere();
+
+        if (game.inventoryOpen) {
+          drawInventoryPanel();
+        }
 
         if (game.settingsOpen) {
           drawSettingsPanel();
@@ -8049,6 +8582,7 @@
 
 
 
+      openInventoryBtn?.addEventListener("click", () => toggleInventory(true));
       openSaveManagerBtn?.addEventListener("click", openSaveManager);
       saveCloseBtn?.addEventListener("click", closeSaveManager);
       saveOverlayEl?.addEventListener("click", (e) => {
