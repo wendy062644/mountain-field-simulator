@@ -546,7 +546,7 @@
           return;
         }
 
-        if (game.started && (k === "b" || k === "i")) {
+        if (game.started && k === "b") {
           e.preventDefault();
           toggleInventory();
           return;
@@ -1167,12 +1167,7 @@
       }
 
       function createDefaultInventory() {
-        const slots = makeEmptyInventory();
-        slots[0] = { id: "milletSeed", qty: 12 };
-        slots[1] = { id: "cornSeed", qty: 12 };
-        slots[2] = { id: "taroSeed", qty: 12 };
-        slots[3] = { id: "sweetPotatoSeed", qty: 12 };
-        return slots;
+        return makeEmptyInventory();
       }
 
       function ensureInventoryReady() {
@@ -1246,7 +1241,7 @@
 
       function getInventorySummary(slots = game.inventory, money = game.money) {
         const used = getInventoryUsedSlots(slots);
-        return `背包：${used} / ${INVENTORY_SIZE}｜金錢：${Math.max(0, Math.floor(Number(money) || 0))} 貝幣`;
+        return `背包：${used} / ${INVENTORY_SIZE}｜${Math.max(0, Math.floor(Number(money) || 0))} 貝幣`;
       }
 
       function toggleInventory(force = null) {
@@ -1268,7 +1263,7 @@
       }
 
       function handleInventoryKey(k) {
-        if (k === "escape" || k === "Escape" || k === "b" || k === "i") {
+        if (k === "escape" || k === "Escape" || k === "b") {
           toggleInventory(false);
           return;
         }
@@ -1373,8 +1368,8 @@
 
         ctx.fillStyle = "#ffebb9";
         ctx.font = "bold 18px Noto Sans TC, Microsoft JhengHei, sans-serif";
-        ctx.fillText(`金錢：${game.money} 貝幣`, g.panelX + 34, g.panelY + 92);
-        ctx.fillText(`容量：${getInventoryUsedSlots()} / ${INVENTORY_SIZE}`, g.panelX + 220, g.panelY + 92);
+        ctx.fillText(`${game.money} 貝幣`, g.panelX + 34, g.panelY + 92);
+        ctx.fillText(`容量：${getInventoryUsedSlots()} / ${INVENTORY_SIZE}`, g.panelX + 180, g.panelY + 92);
 
         ctx.fillStyle = "rgba(60, 34, 18, 0.95)";
         roundRect(ctx, g.panelX + g.panelW - 58, g.panelY + 18, 36, 36, 10);
@@ -1476,7 +1471,7 @@
 
         ctx.fillStyle = "#ffebb9";
         ctx.font = "14px Noto Sans TC, Microsoft JhengHei, sans-serif";
-        ctx.fillText("操作：B / I / Esc 關閉｜方向鍵選擇格子｜滑鼠可點選格子", g.panelX + 34, g.panelY + g.panelH - 28);
+        ctx.fillText("操作：B / Esc 關閉｜方向鍵選擇格子｜滑鼠可點選格子", g.panelX + 34, g.panelY + g.panelH - 28);
         ctx.restore();
       }
 
@@ -1508,6 +1503,7 @@
       let saveRecordsMemory = [];
       let saveRecordsHydrated = false;
       let saveLastStorageRaw = null;
+      let lastRenderedSaveRecords = [];
 
       function isSaveManagerOpen() {
         return !!(saveOverlayEl && saveOverlayEl.classList.contains("active"));
@@ -2196,7 +2192,8 @@
 
       function refreshSaveRecordGrid(records = readSaveRecords()) {
         if (!saveRecordGridEl) return;
-        const sorted = normalizeSaveRecords(records);
+        const sorted = onlyCurrentOwnerRecords(records);
+        lastRenderedSaveRecords = clonePlain(sorted, []);
         if (selectedSaveRecordId && !sorted.some((record) => record.id === selectedSaveRecordId)) {
           selectedSaveRecordId = null;
         }
@@ -2254,7 +2251,7 @@
           loadBtn.textContent = "讀取";
           loadBtn.addEventListener("click", (ev) => {
             ev.stopPropagation();
-            loadSaveRecord(record.id);
+            loadSaveRecord(record.id, record);
           });
 
           const deleteBtn = document.createElement("button");
@@ -2570,22 +2567,33 @@
         return true;
       }
 
-      function loadSaveRecord(recordId) {
-        const record = readSaveRecords().find((item) => item.id === recordId);
+      function findSaveRecordForLoad(recordId, fallbackRecord = null) {
+        const candidates = mergeSaveRecordLists(
+          fallbackRecord ? [fallbackRecord] : [],
+          lastRenderedSaveRecords,
+          saveRecordsMemory,
+          readSaveRecords(),
+        );
+        return candidates.find((item) => item.id === recordId) || null;
+      }
+
+      function loadSaveRecord(recordId, fallbackRecord = null) {
+        const record = findSaveRecordForLoad(recordId, fallbackRecord);
         if (!record) {
-          showSaveMessage("找不到這筆紀錄。");
+          showSaveMessage("找不到這筆紀錄，請重新開啟存檔視窗或重新匯入 JSON。");
           return;
         }
         const ok = applyGameSnapshot(record.snapshot);
-        if (!ok) return;
+        if (!ok) {
+          showSaveMessage("這筆紀錄無法套用，可能是 JSON 已損壞或版本過舊。");
+          return;
+        }
         selectedSaveRecordId = record.id;
         closeSaveManager();
+        updateUI();
+        refreshDialogueUI();
         if (game.started) {
-          setMessage(`已讀取存檔「${record.name}」。`);
           resumeBackgroundMusic();
-        } else {
-          updateUI();
-          refreshDialogueUI();
         }
       }
 
@@ -5474,10 +5482,10 @@
           statusText += "｜全部完成";
         }
 
-        statusText += `｜金錢：${game.money || 0} 貝幣`;
+        statusText += `｜${game.money || 0} 貝幣`;
         statusEl.textContent = statusText;
         if (openInventoryBtn) {
-          openInventoryBtn.textContent = `背包 B / I｜${game.money || 0} 貝幣`;
+          openInventoryBtn.textContent = `背包 (B)｜${game.money || 0} 貝幣`;
         }
         refreshDialogueUI();
       }
