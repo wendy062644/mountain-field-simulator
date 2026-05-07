@@ -207,6 +207,14 @@
         background: rgba(80, 45, 22, 0.96);
       }
 
+      .save-ui-button:disabled,
+      .save-quick-actions button:disabled,
+      .save-card button:disabled {
+        opacity: 0.52;
+        cursor: not-allowed;
+      }
+
+
       .save-ui-button.secondary {
         background: rgba(55, 42, 26, 0.92);
       }
@@ -425,7 +433,7 @@
           <div class="text" id="dialogueText">
             使用方向鍵或 WASD 移動，靠近人物或地點後按空白鍵互動。
           </div>
-          <div class="hint">操作：移動 / 空白鍵互動 / B 背包 / Esc 設定</div>
+          <div class="hint">按空白鍵繼續</div>
         </div>
       </div>
 
@@ -1394,9 +1402,28 @@
         return `背包：${used} / ${INVENTORY_SIZE}｜${Math.max(0, Math.floor(Number(money) || 0))} 貝幣`;
       }
 
+      function isDialogueBlockingInventory() {
+        return !!(game.started && game.isTalking && !game.inventoryOpen);
+      }
+
+      function syncInventoryButtonState() {
+        if (!openInventoryBtn) return;
+        openInventoryBtn.disabled = isDialogueBlockingInventory();
+        openInventoryBtn.title = openInventoryBtn.disabled
+          ? "對話時無法開啟背包"
+          : "開啟背包";
+      }
+
       function toggleInventory(force = null) {
         if (!game.started) return;
-        game.inventoryOpen = force === null ? !game.inventoryOpen : !!force;
+
+        const nextInventoryOpen = force === null ? !game.inventoryOpen : !!force;
+        if (nextInventoryOpen && isDialogueBlockingInventory()) {
+          keys["b"] = false;
+          return;
+        }
+
+        game.inventoryOpen = nextInventoryOpen;
         if (game.inventoryOpen) {
           ensureInventoryReady();
           game.settingsOpen = false;
@@ -4238,6 +4265,7 @@
         dialogueTitle.textContent = game.currentTitle;
         dialogueText.textContent = game.message;
         syncDialogueBox();
+        syncInventoryButtonState();
       }
 
       function setMessage(text, title = "魯凱族山田燒墾") {
@@ -5647,6 +5675,7 @@
         statusEl.textContent = statusText;
         if (openInventoryBtn) {
           openInventoryBtn.textContent = `背包 (B)｜${game.money || 0} 貝幣`;
+          syncInventoryButtonState();
         }
         refreshDialogueUI();
       }
@@ -5876,7 +5905,7 @@
         const rows = [
           { label: "聲音", value: `${game.masterVolume}%` },
           { label: "遊戲速度", value: `${game.gameSpeed}%` },
-          { label: "返回首頁", value: "" },
+          { label: "返回首頁", value: "Enter" },
         ];
 
         rows.forEach((row, i) => {
