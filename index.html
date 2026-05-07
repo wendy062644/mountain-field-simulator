@@ -626,7 +626,6 @@
 
       <div id="saveQuickActions" class="save-quick-actions" aria-label="快捷">
         <button id="openInventoryBtn" type="button">背包 (B)</button>
-        <button id="openSaveManagerBtn" type="button">本機存檔</button>
       </div>
 
       <div id="saveOverlay" aria-hidden="true">
@@ -731,11 +730,7 @@
         if (isSaveManagerOpen()) {
           if ((e.ctrlKey || e.metaKey) && k === "s") {
             e.preventDefault();
-            if (canCreateSaveFromCurrentState()) {
-              addCurrentSaveRecord();
-            } else {
-              showSaveMessage("首頁只能讀取或刪除紀錄。");
-            }
+            showSaveMessage("請使用新增、覆蓋或讀取按鈕管理紀錄。");
           } else if (k === "Escape") {
             e.preventDefault();
             closeSaveManager();
@@ -761,7 +756,7 @@
         if (game.fishingPromptOpen) {
           e.preventDefault();
           if (game.fishingInfoOpen) {
-            if (k === "Escape" || k === "Enter") {
+            if (k === "Escape" || k === "Enter" || k === " ") {
               closeFishingInfoModal();
             }
             return;
@@ -772,7 +767,7 @@
             moveFishingPromptSelection(-1);
           } else if (k === "ArrowRight" || k === "arrowright" || k === "d") {
             moveFishingPromptSelection(1);
-          } else if (k === "Enter") {
+          } else if (k === "Enter" || k === " ") {
             activateFishingPromptSelection();
           }
           return;
@@ -780,7 +775,9 @@
 
         if ((e.ctrlKey || e.metaKey) && k === "s") {
           e.preventDefault();
-          openSaveManager();
+          game.selectedSettingRow = SETTINGS_SAVE_ROW;
+          if (!game.settingsOpen) toggleSettingsMenu();
+          updateUI();
           return;
         }
 
@@ -857,25 +854,22 @@
         if (!game.started) {
           if (game.inMainMenu) {
             if (k === "ArrowUp" || k === "arrowup" || k === "w") {
-              game.mainMenuSelection = (game.mainMenuSelection - 1 + 5) % 5;
+              game.mainMenuSelection = (game.mainMenuSelection - 1 + 4) % 4;
             }
             if (k === "ArrowDown" || k === "arrowdown" || k === "s") {
-              game.mainMenuSelection = (game.mainMenuSelection + 1) % 5;
+              game.mainMenuSelection = (game.mainMenuSelection + 1) % 4;
             }
             if (k === "Enter" || k === " ") {
               if (game.mainMenuSelection === 0) {
                 startNewJourney();
               } else if (game.mainMenuSelection === 1) {
-                openSaveManager();
-              } else if (game.mainMenuSelection === 3) {
+                alert("尚未開放。");
+              } else if (game.mainMenuSelection === 2) {
                 toggleSettingsMenu();
-              } else if (game.mainMenuSelection === 4) {
-                // 退出的視覺效果或alert
+              } else if (game.mainMenuSelection === 3) {
                 alert(
                   "請關閉分頁。",
                 );
-              } else {
-                alert("尚未開放。");
               }
             }
             return;
@@ -916,7 +910,7 @@
           const y = (e.clientY - rect.top) * scaleY;
           const row = getSettingsRowFromPoint(x, y);
           if (row !== -1) game.selectedSettingRow = row;
-          canvas.style.cursor = row === SETTINGS_HOME_ROW ? "pointer" : "default";
+          canvas.style.cursor = row === SETTINGS_SAVE_ROW || row === SETTINGS_HOME_ROW ? "pointer" : "default";
           return;
         }
 
@@ -927,7 +921,7 @@
           const x = (e.clientX - rect.left) * scaleX;
           const y = (e.clientY - rect.top) * scaleY;
 
-          const menus = 5; // 5個菜單按鈕
+          const menus = 4; // 4個菜單按鈕
           const btnW = 280;
           const btnH = 48;
           const startY = 320;
@@ -972,7 +966,7 @@
           const x = (e.clientX - rect.left) * scaleX;
           const y = (e.clientY - rect.top) * scaleY;
 
-          const menus = 5;
+          const menus = 4;
           const btnW = 280;
           const btnH = 48;
           const startY = 320;
@@ -992,16 +986,13 @@
                 startNewJourney();
                 canvas.style.cursor = "default";
               } else if (i === 1) {
-                openSaveManager();
-                canvas.style.cursor = "default";
-              } else if (i === 3) {
+                alert("尚未開放。");
+              } else if (i === 2) {
                 toggleSettingsMenu();
-              } else if (i === 4) {
+              } else if (i === 3) {
                 alert(
                   "請關閉分頁。",
                 );
-              } else {
-                alert("尚未開放。");
               }
               return;
             }
@@ -1287,8 +1278,9 @@
         return game.gameSpeed / 100;
       }
 
-      const SETTINGS_HOME_ROW = 2;
-      const SETTINGS_ROW_COUNT = 3;
+      const SETTINGS_SAVE_ROW = 2;
+      const SETTINGS_HOME_ROW = 3;
+      const SETTINGS_ROW_COUNT = 4;
 
       function clampSettingsSelection() {
         game.selectedSettingRow = clamp(
@@ -1391,14 +1383,17 @@
 
       function activateSelectedSetting() {
         clampSettingsSelection();
-        if (game.selectedSettingRow === SETTINGS_HOME_ROW) {
+        if (game.selectedSettingRow === SETTINGS_SAVE_ROW) {
+          game.settingsOpen = false;
+          openSaveManager();
+        } else if (game.selectedSettingRow === SETTINGS_HOME_ROW) {
           returnToHome();
         }
       }
 
       function getSettingsPanelGeometry() {
         const panelW = canvas.width * 0.38;
-        const panelH = canvas.height * 0.4;
+        const panelH = canvas.height * 0.48;
         const x = (canvas.width - panelW) / 2;
         const y = (canvas.height - panelH) / 2;
         return {
@@ -1406,9 +1401,9 @@
           y,
           panelW,
           panelH,
-          rowStartY: y + 92,
-          rowGap: 58,
-          rowH: 40,
+          rowStartY: y + 96,
+          rowGap: 56,
+          rowH: 42,
         };
       }
 
@@ -1437,7 +1432,7 @@
         const row = getSettingsRowFromPoint(x, y);
         if (row === -1) return;
         game.selectedSettingRow = row;
-        if (row === SETTINGS_HOME_ROW) {
+        if (row === SETTINGS_SAVE_ROW || row === SETTINGS_HOME_ROW) {
           activateSelectedSetting();
         }
       }
@@ -2460,7 +2455,7 @@
           }
         }
 
-        normalized.mainMenuSelection = clamp(safeInteger(safe.mainMenuSelection, 0), 0, 4);
+        normalized.mainMenuSelection = clamp(safeInteger(safe.mainMenuSelection, 0), 0, 3);
         normalized.blessingStep = clamp(safeInteger(safe.blessingStep, 0), 0, 3);
         normalized.burningProgress = Math.max(0, safeNumber(safe.burningProgress, 0));
         normalized.riverIntroStep = clamp(safeInteger(safe.riverIntroStep, 0), 0, 3);
@@ -6790,7 +6785,8 @@
         const rows = [
           { label: "聲音", value: `${game.masterVolume}%` },
           { label: "遊戲速度", value: `${game.gameSpeed}%` },
-          { label: "返回首頁", value: "Enter" },
+          { label: "本機存檔", value: "Enter / 空白" },
+          { label: "返回首頁", value: "Enter / 空白" },
         ];
 
         rows.forEach((row, i) => {
@@ -6807,7 +6803,7 @@
             ctx.stroke();
           }
 
-          ctx.fillStyle = i === SETTINGS_HOME_ROW ? "#ffd27d" : "#ffebb9";
+          ctx.fillStyle = i === SETTINGS_SAVE_ROW || i === SETTINGS_HOME_ROW ? "#ffd27d" : "#ffebb9";
           ctx.font = "22px Noto Sans TC, Microsoft JhengHei, sans-serif";
           ctx.textAlign = "left";
           ctx.fillText(row.label, x + 42, rowY);
@@ -6821,7 +6817,7 @@
         ctx.font = "16px Noto Sans TC, Microsoft JhengHei, sans-serif";
         ctx.textAlign = "center";
         ctx.fillText(
-          "↑↓ 選項　←→ 調整　Enter 確認　ESC 關閉",
+          "↑↓ 選項　←→ 調整　Enter / 空白 確認　ESC 關閉",
           x + panelW / 2,
           y + panelH - 28,
         );
@@ -9893,15 +9889,6 @@
         ctx.fillStyle = "#fff7de";
         ctx.fillRect(bobber.x - 5, bobber.y - 7, 10, 6);
 
-        ctx.fillStyle = "rgba(86, 52, 24, 0.92)";
-        roundRect(ctx, spot.x - 8, spot.y + 24, 62, 18, 8);
-        ctx.fill();
-        ctx.fillStyle = "#ffebb9";
-        ctx.font = "bold 13px Noto Sans TC, Microsoft JhengHei, sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText("釣魚", spot.x + 23, spot.y + 33);
-
         const pulse = 0.5 + Math.sin((game.frameCount || 0) / 28) * 0.18;
         ctx.strokeStyle = `rgba(255, 235, 185, ${pulse})`;
         ctx.lineWidth = 2;
@@ -10087,7 +10074,7 @@
         ctx.shadowOffsetY = 0;
 
         // Buttons
-        const menus = ["新的旅途", "存檔管理", "圖鑑", "設定", "退出"];
+        const menus = ["新的旅途", "圖鑑", "設定", "退出"];
         const btnW = 280;
         const btnH = 48;
         const startY = 320;
@@ -10281,7 +10268,6 @@
 
 
       openInventoryBtn?.addEventListener("click", () => toggleInventory(true));
-      openSaveManagerBtn?.addEventListener("click", openSaveManager);
       fishingInfoCloseBtn?.addEventListener("click", closeFishingInfoModal);
       fishingInfoModalEl?.addEventListener("click", (e) => {
         if (e.target === fishingInfoModalEl) closeFishingInfoModal();
