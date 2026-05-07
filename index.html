@@ -522,6 +522,17 @@
       const WORLD = { w: 56, h: 30 };
       const keys = {};
       let canPressInteract = true;
+      const DIALOGUE_CANCEL_DISTANCE = 132;
+      const DIALOGUE_NPC_SPEAKERS = new Set([
+        "elder",
+        "indoorMale",
+        "indoorFemale",
+        "riverGirl",
+        "mapKeeper",
+        "hunter",
+        "child",
+        "craftWoman",
+      ]);
 
       document.addEventListener("keydown", (e) => {
         const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
@@ -863,6 +874,7 @@
         currentSpeaker: "system",
         currentTitle: "魯凱族山田燒墾",
         isTalking: false,
+        dialogueTarget: null,
         introPlaying: false,
         introFrame: 0,
         introTotalFrames: 900,
@@ -1120,6 +1132,7 @@
         game.currentSpeaker = "system";
         game.currentTitle = "魯凱族山田燒墾";
         game.isTalking = false;
+        game.dialogueTarget = null;
         clearGameplayKeys();
         updateUI();
         refreshDialogueUI();
@@ -1155,6 +1168,7 @@
         game.currentSpeaker = "system";
         game.currentTitle = "魯凱族山田燒墾";
         game.isTalking = false;
+        game.dialogueTarget = null;
 
         clearGameplayKeys();
         updateUI();
@@ -2823,6 +2837,7 @@
         game.settingsOpen = false;
         game.selectedSettingRow = 0;
         game.currentIndoorAudio = null;
+        game.dialogueTarget = null;
 
         if (!game.started) {
           game.inHouse = false;
@@ -2939,6 +2954,7 @@
           dir: "down",
         };
         game.elder = {
+          id: "elder",
           kind: "elder",
           speaker: "elder",
           x: ELDER_SPOTS.prayer.x,
@@ -3140,6 +3156,7 @@
         game.currentSpeaker = "system";
         game.currentTitle = "魯凱族山田燒墾";
         game.isTalking = false;
+        game.dialogueTarget = null;
         game.introPlaying = false;
         game.introFrame = 0;
         game.storyFlags = {
@@ -3392,7 +3409,7 @@
         ];
 
         if (game.riverIntroStep < lines.length) {
-          setDialogue(lines[game.riverIntroStep], "elder");
+          setDialogue(lines[game.riverIntroStep], "elder", null, game.riverElder);
           game.riverIntroStep++;
           return;
         }
@@ -3431,9 +3448,11 @@
             setDialogue(
               "這塊石圖記錄的不是捷徑，而是祖靈走過的方向。若你心裡覺得熟悉，就表示你並不是偶然來到這裡。",
               "mapKeeper",
+              null,
+              npc,
             );
           } else {
-            setDialogue(npc.dialog[1], "mapKeeper");
+            setDialogue(npc.dialog[1], "mapKeeper", null, npc);
           }
           return;
         }
@@ -3444,16 +3463,18 @@
             setDialogue(
               "深山裡不是只有獵物，也有界線。雲豹不常現身，但牠知道誰懷著敬意靠近。",
               "hunter",
+              null,
+              npc,
             );
           } else {
-            setDialogue(npc.dialog[1], "hunter");
+            setDialogue(npc.dialog[1], "hunter", null, npc);
           }
           return;
         }
 
         const line =
           npc.dialog[((game.frameCount / 20) | 0) % npc.dialog.length];
-        setDialogue(line, npc.speaker);
+        setDialogue(line, npc.speaker, null, npc);
       }
 
       function inspectStorySpot(spot) {
@@ -3558,9 +3579,11 @@
           setDialogue(
             "溪水記得每一個倒影。也許你失去的，不只是記憶，而是還沒被自己說出口的名字。",
             "riverGirl",
+            null,
+            npc,
           );
         } else {
-          setDialogue(npc.dialog[1], "riverGirl");
+          setDialogue(npc.dialog[1], "riverGirl", null, npc);
         }
       }
 
@@ -4403,10 +4426,123 @@
         updateUI();
       }
 
-      function setDialogue(text, speaker = "system", title = null) {
+      function getCurrentDialogueSceneKey() {
+        if (game.inRiverScene) return "river";
+        if (game.inHouse) return "house";
+        if (game.inGranary) return "granary";
+        return game.started ? "outdoor" : "menu";
+      }
+
+      function getDialogueTargetId(npc, speaker = "system") {
+        if (!npc) return "";
+        if (npc === game.elder) return "elder";
+        if (npc === game.riverElder) return "riverElder";
+        return String(npc.id || npc.kind || npc.speaker || speaker || "");
+      }
+
+      function findDialogueNpcByTarget(target) {
+        if (!target || typeof target !== "object") return null;
+        if (target.scene !== getCurrentDialogueSceneKey()) return null;
+
+        const id = target.id || "";
+        if (target.scene === "river") {
+          if (id === "riverElder") return game.riverElder || null;
+          if (id === "riverGirl") return game.riverNPC || null;
+          if (game.riverNPC && getDialogueTargetId(game.riverNPC, target.speaker) === id) {
+            return game.riverNPC;
+          }
+          return null;
+        }
+
+        if (target.scene === "house") {
+          return (
+            game.interiorNPCs.find(
+              (npc) => getDialogueTargetId(npc, target.speaker) === id,
+            ) || null
+          );
+        }
+
+        if (target.scene === "outdoor") {
+          if (id === "elder") return game.elder || null;
+          return (
+            game.outdoorNPCs.find(
+              (npc) => getDialogueTargetId(npc, target.speaker) === id,
+            ) || null
+          );
+        }
+
+        return null;
+      }
+
+      function findDialogueNpcBySpeaker(speaker) {
+        const scene = getCurrentDialogueSceneKey();
+
+        if (scene === "river") {
+          if (speaker === "elder" && game.openingAtRiver) return game.riverElder || null;
+          if (game.riverNPC && game.riverNPC.speaker === speaker) return game.riverNPC;
+          return null;
+        }
+
+        if (scene === "house") {
+          return game.interiorNPCs.find((npc) => npc.speaker === speaker || npc.id === speaker) || null;
+        }
+
+        if (scene === "outdoor") {
+          if (speaker === "elder") return game.elder || null;
+          return game.outdoorNPCs.find((npc) => npc.speaker === speaker || npc.id === speaker) || null;
+        }
+
+        return null;
+      }
+
+      function resolveDialogueTarget(speaker, explicitNpc = null) {
+        if (!DIALOGUE_NPC_SPEAKERS.has(speaker) || !game.player) return null;
+
+        const npc = explicitNpc || findDialogueNpcBySpeaker(speaker);
+        if (!npc) return null;
+
+        // 只有「玩家是在 NPC 旁邊開啟的對話」才需要距離取消。
+        // 例如入倉完成後長老的遠距離總結，不會被這個規則誤關。
+        if (!isNear(game.player, npc, DIALOGUE_CANCEL_DISTANCE)) return null;
+
+        return {
+          scene: getCurrentDialogueSceneKey(),
+          id: getDialogueTargetId(npc, speaker),
+          speaker,
+          distance: DIALOGUE_CANCEL_DISTANCE,
+        };
+      }
+
+      function clearCurrentNpcDialogue() {
+        const shouldStopIndoorSong =
+          game.currentSpeaker === "indoorMale" ||
+          game.currentSpeaker === "indoorFemale" ||
+          !!game.currentIndoorAudio;
+        if (shouldStopIndoorSong) stopIndoorSong();
+        game.message = "";
+        game.currentSpeaker = "system";
+        game.currentTitle = "魯凱族山田燒墾";
+        game.isTalking = false;
+        game.dialogueTarget = null;
+        refreshDialogueUI();
+      }
+
+      function updateNpcDialogueDistance() {
+        if (!game.started || !game.isTalking || !game.dialogueTarget) return;
+        if (game.fishing?.active) return;
+
+        const npc = findDialogueNpcByTarget(game.dialogueTarget);
+        const limit = Math.max(48, Number(game.dialogueTarget.distance) || DIALOGUE_CANCEL_DISTANCE);
+        if (!npc || !game.player || !isNear(game.player, npc, limit)) {
+          clearCurrentNpcDialogue();
+        }
+      }
+
+      function setDialogue(text, speaker = "system", title = null, dialogueNpc = null) {
         game.message = text;
         game.currentSpeaker = speaker;
         game.isTalking = true;
+        game.dialogueTarget = resolveDialogueTarget(speaker, dialogueNpc);
 
         const titleMap = {
           system: "魯凱族山田燒墾",
@@ -4524,6 +4660,7 @@
         game.currentSpeaker = "system";
         game.currentTitle = title;
         game.isTalking = false;
+        game.dialogueTarget = null;
         refreshDialogueUI();
       }
 
@@ -4699,10 +4836,10 @@
           );
           if (indoorNpc) {
             if (indoorNpc.id === "indoorMale") {
-              setDialogue(indoorNpc.songText, "indoorMale");
+              setDialogue(indoorNpc.songText, "indoorMale", null, indoorNpc);
               playIndoorSong("male");
             } else {
-              setDialogue(indoorNpc.songText, "indoorFemale");
+              setDialogue(indoorNpc.songText, "indoorFemale", null, indoorNpc);
               playIndoorSong("female");
             }
             return;
@@ -4900,6 +5037,7 @@
             game.seedMenuOpen = true;
             game.seedMenuPlot = plot;
             game.isTalking = false;
+            game.dialogueTarget = null;
             game.message = "請用 1～4 選擇要種植的作物。";
             refreshDialogueUI();
             updateUI();
@@ -5959,7 +6097,8 @@
           game.frameCount++;
           updateFishingMiniGame();
           movePlayer();
-          if (game.inHouse && game.currentIndoorAudio) {
+          updateNpcDialogueDistance();
+          if (game.inHouse && game.currentIndoorAudio && !game.dialogueTarget) {
             let activeNpc = null;
 
             if (game.currentSpeaker === "indoorMale") {
