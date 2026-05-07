@@ -541,6 +541,21 @@
           return;
         }
 
+        if (game.fishing?.active) {
+          if (k === "Escape") {
+            e.preventDefault();
+            cancelFishingMiniGame();
+            return;
+          }
+          if (k === " ") {
+            e.preventDefault();
+            keys[k] = true;
+            return;
+          }
+          e.preventDefault();
+          return;
+        }
+
         if ((e.ctrlKey || e.metaKey) && k === "s") {
           e.preventDefault();
           openSaveManager();
@@ -864,9 +879,13 @@
         riverSceneExitZone: null,
         riverNPC: null,
         riverStorySpot: null,
+        riverFishingSpot: null,
         riverElder: null,
         riverIntroStep: 0,
         openingAtRiver: false,
+
+        fishing: { active: false },
+        fishingStats: { attempts: 0, caught: 0, rareCaught: 0 },
       };
 
       const CROP_IMAGE_CONFIG = {
@@ -1257,6 +1276,48 @@
           color: "#d8d8d8",
           desc: "你避開小鳥巢後，拾起的一片掉落羽毛。",
         },
+        fishRiverMinnow: {
+          name: "溪哥魚",
+          short: "溪哥",
+          icon: "魚",
+          color: "#8fc5c8",
+          desc: "溪水邊常見的小魚，普通收竿約 36%，完美收竿約 31%。",
+        },
+        fishStoneLoach: {
+          name: "石縫鰍",
+          short: "石鰍",
+          icon: "鰍",
+          color: "#9b8462",
+          desc: "躲在石縫裡的魚，普通收竿約 26%，完美收竿約 25%。",
+        },
+        fishMountainTrout: {
+          name: "山溪鱒",
+          short: "山鱒",
+          icon: "鱒",
+          color: "#91a7d6",
+          desc: "喜歡清冷溪水的魚，普通收竿約 18%，完美收竿約 19%。",
+        },
+        fishRiverEel: {
+          name: "溪鰻",
+          short: "溪鰻",
+          icon: "鰻",
+          color: "#5d5a49",
+          desc: "細長的溪鰻，普通收竿約 11%，完美收竿約 12%。",
+        },
+        fishGoldenCarp: {
+          name: "金紋溪魚",
+          short: "金紋",
+          icon: "金",
+          color: "#d7a946",
+          desc: "帶著金色斑紋的魚，普通收竿約 8%，完美收竿約 9%。",
+        },
+        fishSpiritSilver: {
+          name: "祖靈銀鱗魚",
+          short: "銀鱗",
+          icon: "靈",
+          color: "#dfe7ff",
+          desc: "特別難獲得的傳說魚，普通收竿約 1%，完美收竿約 4%。",
+        },
         harvestMillet: {
           name: "小米收成",
           short: "小米",
@@ -1307,6 +1368,24 @@
         芋頭: 12,
         地瓜: 10,
       };
+
+      const RARE_FISH_ID = "fishSpiritSilver";
+      const FISH_ROLL_TABLE = [
+        { id: "fishRiverMinnow", weight: 360 },
+        { id: "fishStoneLoach", weight: 260 },
+        { id: "fishMountainTrout", weight: 180 },
+        { id: "fishRiverEel", weight: 110 },
+        { id: "fishGoldenCarp", weight: 80 },
+        { id: RARE_FISH_ID, weight: 10 },
+      ];
+      const PERFECT_FISH_ROLL_TABLE = [
+        { id: "fishRiverMinnow", weight: 310 },
+        { id: "fishStoneLoach", weight: 250 },
+        { id: "fishMountainTrout", weight: 190 },
+        { id: "fishRiverEel", weight: 120 },
+        { id: "fishGoldenCarp", weight: 90 },
+        { id: RARE_FISH_ID, weight: 40 },
+      ];
 
       function makeEmptyInventory() {
         return Array.from({ length: INVENTORY_SIZE }, () => null);
@@ -1403,14 +1482,20 @@
       }
 
       function isDialogueBlockingInventory() {
-        return !!(game.started && game.isTalking && !game.inventoryOpen);
+        return !!(
+          game.started &&
+          !game.inventoryOpen &&
+          (game.isTalking || game.fishing?.active)
+        );
       }
 
       function syncInventoryButtonState() {
         if (!openInventoryBtn) return;
         openInventoryBtn.disabled = isDialogueBlockingInventory();
         openInventoryBtn.title = openInventoryBtn.disabled
-          ? "對話時無法開啟背包"
+          ? game.fishing?.active
+            ? "釣魚時無法開啟背包"
+            : "對話時無法開啟背包"
           : "開啟背包";
       }
 
@@ -1418,6 +1503,10 @@
         if (!game.started) return;
 
         const nextInventoryOpen = force === null ? !game.inventoryOpen : !!force;
+        if (nextInventoryOpen && game.fishing?.active) {
+          keys["b"] = false;
+          return;
+        }
         if (nextInventoryOpen && isDialogueBlockingInventory()) {
           keys["b"] = false;
           return;
@@ -1669,7 +1758,7 @@
       }
 
 
-      const SAVE_FILE_VERSION = 3;
+      const SAVE_FILE_VERSION = 4;
       const SAVE_APP_ID = "rukai-millet-game";
       // 玩家進度只保存在目前瀏覽器。
       const SAVE_STORAGE_KEY = "rukaiMilletLocalOnlyRecordsV4";
@@ -2030,6 +2119,15 @@
         };
       }
 
+      function normalizeFishingStats(value) {
+        const source = value && typeof value === "object" ? value : {};
+        return {
+          attempts: Math.max(0, safeInteger(source.attempts, 0)),
+          caught: Math.max(0, safeInteger(source.caught, 0)),
+          rareCaught: Math.max(0, safeInteger(source.rareCaught, 0)),
+        };
+      }
+
       function normalizeGameSnapshot(snapshot) {
         const safe = clonePlain(snapshot, null);
         if (!safe || typeof safe !== "object") return null;
@@ -2051,6 +2149,7 @@
           inventory: normalizeInventory(safe.inventory),
           granaryStoredCrops: normalizeGranaryStoredCrops(safe.granaryStoredCrops),
           storyFlags: normalizeStoryFlags(safe.storyFlags),
+          fishingStats: normalizeFishingStats(safe.fishingStats),
         };
 
         const booleanKeys = [
@@ -2220,7 +2319,8 @@
           selectedInventorySlot: game.selectedInventorySlot || 0,
           money: game.money || 0,
           storyFlags: clonePlain(game.storyFlags, {}),
-          message: game.message,
+          fishingStats: clonePlain(game.fishingStats, { attempts: 0, caught: 0, rareCaught: 0 }),
+          message: game.fishing?.active ? "" : game.message,
           currentSpeaker: game.currentSpeaker,
           currentTitle: game.currentTitle,
           isTalking: game.isTalking,
@@ -2701,6 +2801,8 @@
         game.inventory = normalizeInventory(safe.inventory);
         game.money = Math.max(0, safeInteger(safe.money, 0));
         game.storyFlags = { ...game.storyFlags, ...normalizeStoryFlags(safe.storyFlags) };
+        game.fishingStats = normalizeFishingStats(safe.fishingStats);
+        game.fishing = { active: false };
         game.camera = {
           x: safeNumber(safe.camera?.x, 0),
           y: safeNumber(safe.camera?.y, 0),
@@ -2930,6 +3032,15 @@
             rotation: bridge.rotation || 0,
           },
         };
+        game.riverFishingSpot = {
+          x: 510,
+          y: 438,
+          w: 44,
+          h: 44,
+          label: "釣魚點",
+          bobber: { x: 566, y: 398 },
+          promptBox: { x: 504, y: 430, w: 58, h: 54 },
+        };
         const g = getGranaryGeometry();
 
         // 為了符合放大後的糧倉圖片，我們把互動區域與碰撞框對應放大與往下移
@@ -3039,6 +3150,8 @@
         };
         game.riverIntroStep = 0;
         game.openingAtRiver = false;
+        game.fishing = { active: false };
+        game.fishingStats = { attempts: 0, caught: 0, rareCaught: 0 };
         game.outdoorNPCs = [];
         game.storySpots = {};
         buildWorld();
@@ -3456,6 +3569,142 @@
           "溪水貼著左側山腳平緩流出，先沿著坡腳向右橫流，再順著地勢往右下方流到畫面外。",
           "河邊",
         );
+      }
+
+      function getNearbyRiverFishingSpot() {
+        if (
+          !game.inRiverScene ||
+          !game.riverFishingSpot ||
+          game.openingAtRiver ||
+          game.fishing?.active
+        ) {
+          return null;
+        }
+        return isNear(game.player, game.riverFishingSpot, 82)
+          ? game.riverFishingSpot
+          : null;
+      }
+
+      function rollWeightedFish(table = FISH_ROLL_TABLE) {
+        const entries = table.filter(
+          (entry) => entry && entry.weight > 0 && INVENTORY_ITEM_DEFS[entry.id],
+        );
+        const totalWeight = entries.reduce((sum, entry) => sum + entry.weight, 0);
+        if (totalWeight <= 0) return null;
+
+        let roll = Math.random() * totalWeight;
+        for (const entry of entries) {
+          roll -= entry.weight;
+          if (roll < 0) return entry.id;
+        }
+        return entries[entries.length - 1]?.id || null;
+      }
+
+      function startFishingMiniGame() {
+        if (!game.started || !game.inRiverScene || game.openingAtRiver) return;
+        ensureInventoryReady();
+        game.fishing = {
+          active: true,
+          meter: 0.08 + Math.random() * 0.84,
+          direction: Math.random() < 0.5 ? -1 : 1,
+          speed: 0.010 + Math.random() * 0.006,
+          targetCenter: 0.35 + Math.random() * 0.3,
+          targetSize: 0.18,
+          perfectSize: 0.055,
+          timeLeft: 240,
+          startedAt: game.frameCount || 0,
+        };
+        keys[" "] = false;
+        canPressInteract = false;
+        setMessage(
+          "魚影靠近了。看準下方時機條，游標進入亮色區域時按空白鍵收竿；越接近中央，越有機會釣到稀有魚。",
+          "釣魚",
+        );
+      }
+
+      function cancelFishingMiniGame() {
+        if (!game.fishing?.active) return;
+        game.fishing = { active: false };
+        clearGameplayKeys();
+        setMessage("你收起釣線，溪面又恢復平靜。", "釣魚");
+        updateUI();
+      }
+
+      function finishFishingMiniGame(result, quality = "miss") {
+        game.fishing = { active: false };
+        game.fishingStats = normalizeFishingStats(game.fishingStats);
+        game.fishingStats.attempts += 1;
+
+        if (!result) {
+          const missText =
+            quality === "timeout"
+              ? "魚影從浮標旁滑走了。下次要更快收竿。"
+              : "收竿太早或太晚，魚兒被水花驚走了。";
+          clearGameplayKeys();
+          setMessage(missText, "釣魚");
+          updateUI();
+          return;
+        }
+
+        const def = INVENTORY_ITEM_DEFS[result];
+        const added = addItemToInventory(result, 1);
+        if (!added) {
+          clearGameplayKeys();
+          setMessage(
+            `你釣到了${def?.name || "魚"}，但背包已滿，只好把牠放回溪裡。`,
+            "釣魚",
+          );
+          updateUI();
+          return;
+        }
+
+        game.fishingStats.caught += 1;
+        if (result === RARE_FISH_ID) game.fishingStats.rareCaught += 1;
+
+        const qualityText = quality === "perfect" ? "完美收竿！" : "成功收竿！";
+        const rareText =
+          result === RARE_FISH_ID
+            ? "這是特別難獲得的祖靈銀鱗魚，溪水像替牠閃了一下光。"
+            : "魚已放進背包。";
+        clearGameplayKeys();
+        setMessage(`${qualityText}你釣到了${def?.name || "魚"}。${rareText}`, "釣魚");
+        updateUI();
+      }
+
+      function tryFishingHook() {
+        const state = game.fishing;
+        if (!state?.active) return;
+        const diff = Math.abs(state.meter - state.targetCenter);
+        const perfect = diff <= state.perfectSize / 2;
+        const success = diff <= state.targetSize / 2;
+
+        if (!success) {
+          finishFishingMiniGame(null, "miss");
+          return;
+        }
+
+        const fishId = rollWeightedFish(perfect ? PERFECT_FISH_ROLL_TABLE : FISH_ROLL_TABLE);
+        finishFishingMiniGame(fishId, perfect ? "perfect" : "success");
+      }
+
+      function updateFishingMiniGame() {
+        const state = game.fishing;
+        if (!state?.active) return;
+
+        const factor = Math.max(0.5, speedFactor());
+        state.meter += state.speed * state.direction * factor;
+        if (state.meter <= 0) {
+          state.meter = 0;
+          state.direction = 1;
+        } else if (state.meter >= 1) {
+          state.meter = 1;
+          state.direction = -1;
+        }
+
+        state.timeLeft -= 1 * factor;
+        if (state.timeLeft <= 0) {
+          finishFishingMiniGame(null, "timeout");
+        }
       }
 
       function pointInEllipse(px, py, ellipse, padding = 0) {
@@ -4046,6 +4295,7 @@
       }
 
       function movePlayer() {
+        if (game.fishing?.active) return;
         const p = game.player;
         let dx = 0,
           dy = 0;
@@ -4240,7 +4490,7 @@
       }
 
       function syncDialogueBox() {
-        const shouldShow = game.started && !!game.message;
+        const shouldShow = game.started && !!game.message && !game.fishing?.active;
         dialogueEl.classList.toggle("active", shouldShow);
         dialogueEl.classList.toggle("talking", shouldShow && game.isTalking);
 
@@ -4316,6 +4566,12 @@
         const pressed = keys[" "];
         if (!pressed || !canPressInteract) return;
         canPressInteract = false;
+
+        if (game.fishing?.active) {
+          tryFishingHook();
+          return;
+        }
+
         const player = game.player;
 
         if (game.inRiverScene) {
@@ -4330,6 +4586,12 @@
           const riverNpc = getNearbyRiverNPC();
           if (riverNpc) {
             talkToRiverNPC(riverNpc);
+            return;
+          }
+
+          const fishingSpot = getNearbyRiverFishingSpot();
+          if (fishingSpot) {
+            startFishingMiniGame();
             return;
           }
 
@@ -5581,8 +5843,9 @@
         if (game.inRiverScene && game.openingAtRiver) {
           missionEl.textContent = "任務：在河道旁與長老對話";
         } else if (game.inRiverScene) {
-          missionEl.textContent =
-            "探索河邊空地，靠近右側樹叢中的小徑後按空白鍵可返回部落";
+          missionEl.textContent = game.fishing?.active
+            ? "釣魚中：看準時機，按空白鍵收竿"
+            : "探索河邊空地，靠近釣魚點可釣魚，靠近右側小徑可返回部落";
         } else if (game.inHouse) {
           missionEl.textContent = "探索石板屋，靠近門口按空白鍵可離開";
         } else if (game.inGranary) {
@@ -5635,7 +5898,11 @@
         let statusText = `場景：${sceneName}`;
 
         if (game.inRiverScene) {
-          statusText += "｜探索中";
+          if (game.fishing?.active) {
+            statusText += "｜釣魚中";
+          } else {
+            statusText += `｜探索中｜釣獲：${game.fishingStats?.caught || 0}`;
+          }
         } else if (game.inHouse) {
           statusText += "｜探索中";
         } else if (!game.blessingDone) {
@@ -5690,6 +5957,7 @@
 
         if (game.started && !game.settingsOpen && !game.inventoryOpen && !isSaveManagerOpen()) {
           game.frameCount++;
+          updateFishingMiniGame();
           movePlayer();
           if (game.inHouse && game.currentIndoorAudio) {
             let activeNpc = null;
@@ -5763,7 +6031,9 @@
         topbarEl.style.display = game.started ? "flex" : "none";
         if (saveQuickActionsEl) {
           saveQuickActionsEl.style.display =
-            game.started && !game.inventoryOpen && !isSaveManagerOpen() ? "flex" : "none";
+            game.started && !game.inventoryOpen && !game.fishing?.active && !isSaveManagerOpen()
+              ? "flex"
+              : "none";
         }
 
         if (!game.started) {
@@ -5867,6 +6137,7 @@
         }
 
         drawAtmosphere();
+        drawFishingMiniGameOverlay();
 
         if (game.inventoryOpen) {
           drawInventoryPanel();
@@ -8958,6 +9229,8 @@
         drawBush(1170, 316, "#355a29");
         drawBush(1180, 402, "#446d35");
 
+        drawRiverFishingSpot();
+
         ctx.fillStyle = "#1d281d";
         ctx.fillRect(0, 0, room.x, canvas.height);
         ctx.fillRect(
@@ -8975,6 +9248,137 @@
         );
       }
 
+      function drawRiverFishingSpot() {
+        const spot = game.riverFishingSpot;
+        if (!game.inRiverScene || !spot) return;
+
+        const bx = spot.x + spot.w * 0.5;
+        const by = spot.y + spot.h * 0.5;
+        const bobber = spot.bobber || { x: bx + 54, y: by - 36 };
+
+        ctx.save();
+        ctx.strokeStyle = "rgba(63, 41, 22, 0.86)";
+        ctx.lineWidth = 5;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(bx - 16, by + 30);
+        ctx.lineTo(bx + 8, by - 22);
+        ctx.stroke();
+
+        ctx.strokeStyle = "rgba(245, 231, 190, 0.72)";
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(bx + 8, by - 22);
+        ctx.quadraticCurveTo(bx + 42, by - 44, bobber.x, bobber.y);
+        ctx.stroke();
+
+        ctx.fillStyle = "#c64b3d";
+        ctx.beginPath();
+        ctx.ellipse(bobber.x, bobber.y, 5, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fff7de";
+        ctx.fillRect(bobber.x - 5, bobber.y - 7, 10, 6);
+
+        ctx.fillStyle = "rgba(86, 52, 24, 0.92)";
+        roundRect(ctx, spot.x - 8, spot.y + 24, 62, 18, 8);
+        ctx.fill();
+        ctx.fillStyle = "#ffebb9";
+        ctx.font = "bold 13px Noto Sans TC, Microsoft JhengHei, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("釣魚", spot.x + 23, spot.y + 33);
+
+        const pulse = 0.5 + Math.sin((game.frameCount || 0) / 28) * 0.18;
+        ctx.strokeStyle = `rgba(255, 235, 185, ${pulse})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(spot.x + spot.w / 2, spot.y + spot.h / 2 + 8, 34, 15, -0.1, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawFishingMiniGameOverlay() {
+        const state = game.fishing;
+        if (!state?.active) return;
+
+        const panelW = 760;
+        const panelH = 184;
+        const x = (canvas.width - panelW) / 2;
+        const y = canvas.height - panelH - 34;
+        const barX = x + 58;
+        const barY = y + 104;
+        const barW = panelW - 116;
+        const barH = 24;
+        const targetX = barX + state.targetCenter * barW;
+        const targetW = state.targetSize * barW;
+        const perfectW = state.perfectSize * barW;
+        const markerX = barX + state.meter * barW;
+        const timeRatio = clamp((state.timeLeft || 0) / 240, 0, 1);
+
+        ctx.save();
+        ctx.fillStyle = "rgba(0, 0, 0, 0.42)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "rgba(35, 24, 12, 0.96)";
+        roundRect(ctx, x, y, panelW, panelH, 20);
+        ctx.fill();
+        ctx.strokeStyle = "#e6c98a";
+        ctx.lineWidth = 4;
+        roundRect(ctx, x, y, panelW, panelH, 20);
+        ctx.stroke();
+
+        ctx.fillStyle = "#ffd27d";
+        ctx.font = "bold 26px Noto Sans TC, Microsoft JhengHei, sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillText("釣魚小遊戲", x + 30, y + 42);
+
+        ctx.fillStyle = "#ffebb9";
+        ctx.font = "15px Noto Sans TC, Microsoft JhengHei, sans-serif";
+        ctx.fillText("游標進入亮色區域時按空白鍵收竿；中央小區域是完美收竿。Esc 可取消。", x + 30, y + 64);
+        ctx.font = "13px Noto Sans TC, Microsoft JhengHei, sans-serif";
+        ctx.fillText("魚種機率不同：溪哥36%／石鰍26%／山鱒18%／溪鰻11%／金紋8%／祖靈銀鱗1%。", x + 30, y + 84);
+
+        ctx.fillStyle = "rgba(18, 12, 7, 0.86)";
+        roundRect(ctx, barX, barY, barW, barH, 12);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(230, 201, 138, 0.55)";
+        ctx.lineWidth = 2;
+        roundRect(ctx, barX, barY, barW, barH, 12);
+        ctx.stroke();
+
+        ctx.fillStyle = "rgba(117, 181, 88, 0.86)";
+        roundRect(ctx, targetX - targetW / 2, barY + 3, targetW, barH - 6, 9);
+        ctx.fill();
+        ctx.fillStyle = "rgba(255, 230, 126, 0.96)";
+        roundRect(ctx, targetX - perfectW / 2, barY + 2, perfectW, barH - 4, 8);
+        ctx.fill();
+
+        ctx.strokeStyle = "#fff7de";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(markerX, barY - 12);
+        ctx.lineTo(markerX, barY + barH + 12);
+        ctx.stroke();
+        ctx.fillStyle = "#fff7de";
+        ctx.beginPath();
+        ctx.arc(markerX, barY - 13, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "rgba(255, 247, 222, 0.2)";
+        roundRect(ctx, x + 58, y + 146, barW, 8, 4);
+        ctx.fill();
+        ctx.fillStyle = "#ffebb9";
+        roundRect(ctx, x + 58, y + 146, barW * timeRatio, 8, 4);
+        ctx.fill();
+
+        ctx.fillStyle = "#fff7de";
+        ctx.font = "bold 14px Noto Sans TC, Microsoft JhengHei, sans-serif";
+        ctx.textAlign = "right";
+        ctx.fillText(`釣獲：${game.fishingStats?.caught || 0}｜稀有：${game.fishingStats?.rareCaught || 0}`, x + panelW - 30, y + 42);
+        ctx.restore();
+      }
+
       function drawRiverInteractionHints() {
         if (!game.inRiverScene) return;
 
@@ -8987,6 +9391,15 @@
           const riverNpc = getNearbyRiverNPC();
           if (riverNpc) {
             drawInteractOutline(riverNpc);
+          }
+
+          const fishingSpot = getNearbyRiverFishingSpot();
+          if (fishingSpot) {
+            drawInteractOutline(fishingSpot, 8);
+            drawPromptBubble("釣魚", fishingSpot.x - 2, fishingSpot.y - 24, {
+              fitBox: fishingSpot.promptBox || fishingSpot,
+              extraWidth: 18,
+            });
           }
 
           const riverSpot = getNearbyRiverSpot();
